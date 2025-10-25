@@ -7,9 +7,6 @@ mvn clean install
 
 # 2. Spustit aplikaci
 mvn spring-boot:run
-
-# 3. Otevřít v prohlížeči
-http://localhost:8080/api/health
 ```
 
 ## 🐳 Docker spuštění
@@ -20,8 +17,7 @@ docker-compose up backend
 
 ## 📝 API Endpoints
 
-- `GET /api/health` - Health check + DB status
-- `GET /actuator/health` - Spring Boot actuator health
+- `GET /api/auth'
 
 ## 🔧 Environment Variables
 
