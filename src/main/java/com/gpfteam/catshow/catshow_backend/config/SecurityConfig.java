@@ -3,6 +3,7 @@ package com.gpfteam.catshow.catshow_backend.config;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -25,7 +26,11 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable()) // Vypneme CSRF pro API
 
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**").permitAll()
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/exhibitions", "/api/v1/exhibitions/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/exhibitions/all").authenticated()
+                        .requestMatchers("/api/v1/exhibitions", "/api/v1/exhibitions/**").authenticated()
 
                         // Všechny ostatní požadavky musí být ověřené
                         .anyRequest().authenticated()
