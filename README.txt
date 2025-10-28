@@ -1,6 +1,9 @@
 # Cat Show Backend API
 
-## 🚀 Lokální spuštění (bez Dockeru)
+## Spuštění přes IDEA
+# 1. Spustit \src\main\java\com\gpfteam\catshow\catshow_backend\CatShowBackendApplication.java
+
+## Lokální spuštění
 ```bash
 # 1. Nainstalovat dependencies
 mvn clean install
@@ -9,17 +12,11 @@ mvn clean install
 mvn spring-boot:run
 ```
 
-## 🐳 Docker spuštění
-```bash
-# Z root složky projektu
-docker-compose up backend
-```
+## API Endpoints
 
-## 📝 API Endpoints
+- `GET /api/v1/auth'
 
-- `GET /api/auth'
-
-## 🔧 Environment Variables
+## Environment Variables
 
 | Variable | Default | Popis |
 |----------|---------|-------|
