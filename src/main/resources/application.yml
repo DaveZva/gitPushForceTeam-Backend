@@ -22,7 +22,7 @@ spring:
     endpoints:
       web:
         exposure:
-          include: health,info
+          include: info
     endpoint:
       health:
         show-details: always

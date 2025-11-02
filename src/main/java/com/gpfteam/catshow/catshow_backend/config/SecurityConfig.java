@@ -22,30 +22,27 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configure(http)) // Ponecháme CORS
-                .csrf(csrf -> csrf.disable()) // Vypneme CSRF pro API
-
+                .cors(cors -> cors.configure(http))
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/api/v1/auth/**").permitAll()
 
-                        .requestMatchers(HttpMethod.GET, "/api/v1/exhibitions", "/api/v1/exhibitions/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/exhibitions/all").authenticated()
-                        .requestMatchers("/api/v1/exhibitions", "/api/v1/exhibitions/**").authenticated()
+                        // --- VEŘEJNÉ ENDPOINTY (pro registraci) ---
+                        .requestMatchers("/api/v1/auth/**").permitAll() // Přihlášení
+                        .requestMatchers(HttpMethod.GET, "/api/v1/exhibitions/available").permitAll() // Seznam výstav pro formulář
+                        // .requestMatchers(HttpMethod.POST, "/api/v1/registrations").permitAll()
 
-                        // Všechny ostatní požadavky musí být ověřené
+                        .requestMatchers("/api/v1/secretariat/**").authenticated()
+
+                        // Vše ostatní musí být také ověřeno
                         .anyRequest().authenticated()
                 )
-
-                // Řekneme Springu, aby nepoužíval session, budeme stateless (JWT)
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-
                 .authenticationProvider(authenticationProvider)
-
-                // Přidáme náš JWT filtr, aby běžel PŘED standardním filtrem
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 }
+
