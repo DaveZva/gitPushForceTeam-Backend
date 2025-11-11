@@ -5,7 +5,7 @@ spring:
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:catshow}
     username: ${DB_USER:postgres}
-    password: ${DB_PASSWORD:password}
+    password: ${DB_PASSWORD:heslo}
     driver-class-name: org.postgresql.Driver
   
   jpa:

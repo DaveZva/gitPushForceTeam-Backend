@@ -29,7 +29,7 @@ public class SecurityConfig {
                         // --- VEŘEJNÉ ENDPOINTY (pro registraci) ---
                         .requestMatchers("/api/v1/auth/**").permitAll() // Přihlášení
                         .requestMatchers(HttpMethod.GET, "/api/v1/exhibitions/available").permitAll() // Seznam výstav pro formulář
-                        // .requestMatchers(HttpMethod.POST, "/api/v1/registrations").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/registrations").permitAll()
 
                         .requestMatchers("/api/v1/secretariat/**").authenticated()
 
