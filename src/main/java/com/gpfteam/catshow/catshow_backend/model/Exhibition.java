@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "shows") // Název tabulky v databázi
+@Table(name = "exhibitions") // Název tabulky v databázi
 
 public class Exhibition {
     @Id
@@ -23,7 +23,6 @@ public class Exhibition {
     @Column(nullable = false)
     private String name;
 
-    @Lob // (Long Object)
     @Column(columnDefinition = "TEXT")
     private String description;
 
