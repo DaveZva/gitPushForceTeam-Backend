@@ -30,7 +30,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll() // Přihlášení
                         .requestMatchers(HttpMethod.GET, "/api/v1/exhibitions/available").permitAll() // Seznam výstav pro formulář
                         .requestMatchers(HttpMethod.POST, "/api/v1/registrations").permitAll()
-                        .requestMatchers("/api/v1/secretariat/**").authenticated()
+                        .requestMatchers("/api/v1/secretariat/**").permitAll()
 
                         // Vše ostatní musí být také ověřeno
                         .anyRequest().authenticated()
