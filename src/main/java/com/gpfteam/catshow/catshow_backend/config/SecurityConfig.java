@@ -10,6 +10,12 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -22,17 +28,17 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configure(http))
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authz -> authz
 
-                        // --- VEŘEJNÉ ENDPOINTY (pro registraci) ---
-                        .requestMatchers("/api/v1/auth/**").permitAll() // Přihlášení
-                        .requestMatchers(HttpMethod.GET, "/api/v1/exhibitions/available").permitAll() // Seznam výstav pro formulář
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/exhibitions/available").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/registrations").permitAll()
-                        .requestMatchers("/api/v1/secretariat/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/my-registrations").authenticated()
+                        .requestMatchers("/api/v1/secretariat/**").authenticated()
 
-                        // Vše ostatní musí být také ověřeno
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
@@ -43,5 +49,21 @@ public class SecurityConfig {
 
         return http.build();
     }
-}
 
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
+
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+
+        configuration.setAllowedHeaders(List.of("*"));
+
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+}
