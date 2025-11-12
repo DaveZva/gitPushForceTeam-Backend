@@ -1,7 +1,7 @@
 package com.gpfteam.catshow.catshow_backend.config;
 
 import com.gpfteam.catshow.catshow_backend.repository.UserRepository;
-import com.gpfteam.catshow.catshow_backend.repository.ExhibitionRepository;
+import com.gpfteam.catshow.catshow_backend.repository.ShowRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,7 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 public class ApplicationConfig {
 
     private final UserRepository userRepository;
-    private final ExhibitionRepository exhibitionRepository;
+    private final ShowRepository exhibitionRepository;
 
 
     @Bean

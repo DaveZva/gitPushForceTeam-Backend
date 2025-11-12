@@ -1,7 +1,7 @@
 package com.gpfteam.catshow.catshow_backend.controller;
 
-import com.gpfteam.catshow.catshow_backend.model.Exhibition;
-import com.gpfteam.catshow.catshow_backend.repository.ExhibitionRepository;
+import com.gpfteam.catshow.catshow_backend.model.Show;
+import com.gpfteam.catshow.catshow_backend.repository.ShowRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -17,15 +17,15 @@ import java.util.List;
 @CrossOrigin(origins = "*")
 public class PublicExhibitionController {
 
-    private final ExhibitionRepository exhibitionRepository;
+    private final ShowRepository exhibitionRepository;
 
     /**
      * GET /api/v1/exhibitions/available
      * Veřejný endpoint pro registrační formulář
      */
     @GetMapping("/available")
-    public ResponseEntity<List<Exhibition>> getAvailableExhibitions() {
-        List<Exhibition> openExhibitions = exhibitionRepository.findByStatusOrderByStartDateAsc(Exhibition.ExhibitionStatus.OPEN);
+    public ResponseEntity<List<Show>> getAvailableExhibitions() {
+        List<Show> openExhibitions = exhibitionRepository.findByStatusOrderByStartDateAsc(Show.ShowStatus.OPEN);
         return ResponseEntity.ok(openExhibitions);
     }
 }

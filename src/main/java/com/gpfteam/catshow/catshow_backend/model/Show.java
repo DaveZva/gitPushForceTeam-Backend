@@ -13,9 +13,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "exhibitions") // Název tabulky v databázi
+@Table(name = "shows")
 
-public class Exhibition {
+public class Show {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -28,7 +28,7 @@ public class Exhibition {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ExhibitionStatus status;
+    private ShowStatus status;
 
     @Column(nullable = false)
     private String venueName;
@@ -49,7 +49,7 @@ public class Exhibition {
     private String contactEmail;
     private String websiteUrl;
 
-    public enum ExhibitionStatus {
+    public enum ShowStatus {
         PLANNED,  // Připravuje se
         OPEN,     // Otevřeno pro registrace
         CLOSED,   // Registrace uzavřeny

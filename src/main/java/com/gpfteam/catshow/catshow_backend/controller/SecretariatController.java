@@ -1,7 +1,7 @@
 package com.gpfteam.catshow.catshow_backend.controller;
 
-import com.gpfteam.catshow.catshow_backend.model.Exhibition;
-import com.gpfteam.catshow.catshow_backend.repository.ExhibitionRepository;
+import com.gpfteam.catshow.catshow_backend.model.Show;
+import com.gpfteam.catshow.catshow_backend.repository.ShowRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
@@ -15,15 +15,15 @@ import java.util.List;
 @CrossOrigin(origins = "*")
 public class SecretariatController {
 
-    private final ExhibitionRepository exhibitionRepository;
+    private final ShowRepository exhibitionRepository;
 
     /**
      * GET /api/v1/secretariat/exhibition
      * Získá VŠECHNY výstavy pro sekretariát, seřazené
      */
     @GetMapping
-    public ResponseEntity<List<Exhibition>> getAllExhibitionsForSecretariat() {
-        List<Exhibition> allExhibitions = exhibitionRepository.findAll(
+    public ResponseEntity<List<Show>> getAllExhibitionsForSecretariat() {
+        List<Show> allExhibitions = exhibitionRepository.findAll(
                 Sort.by(Sort.Direction.DESC, "startDate")
         );
         return ResponseEntity.ok(allExhibitions);
@@ -34,7 +34,7 @@ public class SecretariatController {
      * Získá jednu výstavu podle ID (pro editaci)
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Exhibition> getExhibitionById(@PathVariable Long id) {
+    public ResponseEntity<Show> getExhibitionById(@PathVariable Long id) {
         return exhibitionRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -45,12 +45,12 @@ public class SecretariatController {
      * Vytvoří novou výstavu
      */
     @PostMapping
-    public ResponseEntity<Exhibition> createExhibition(@RequestBody Exhibition exhibition) {
+    public ResponseEntity<Show> createExhibition(@RequestBody Show exhibition) {
         exhibition.setId(null); // Zajistíme, že vytváříme novou
         if (exhibition.getStatus() == null) {
-            exhibition.setStatus(Exhibition.ExhibitionStatus.PLANNED);
+            exhibition.setStatus(Show.ShowStatus.PLANNED);
         }
-        Exhibition savedExhibition = exhibitionRepository.save(exhibition);
+        Show savedExhibition = exhibitionRepository.save(exhibition);
         return ResponseEntity.status(201).body(savedExhibition);
     }
 
@@ -59,7 +59,7 @@ public class SecretariatController {
      * Aktualizuje existující výstavu
      */
     @PutMapping("/{id}")
-    public ResponseEntity<Exhibition> updateExhibition(@PathVariable Long id, @RequestBody Exhibition exhibitionDetails) {
+    public ResponseEntity<Show> updateExhibition(@PathVariable Long id, @RequestBody Show exhibitionDetails) {
         return exhibitionRepository.findById(id)
                 .map(existingExhibition -> {
                     // Zkopírujeme všechna pole
@@ -78,7 +78,7 @@ public class SecretariatController {
                     existingExhibition.setContactEmail(exhibitionDetails.getContactEmail());
                     existingExhibition.setWebsiteUrl(exhibitionDetails.getWebsiteUrl());
 
-                    Exhibition updatedExhibition = exhibitionRepository.save(existingExhibition);
+                    Show updatedExhibition = exhibitionRepository.save(existingExhibition);
                     return ResponseEntity.ok(updatedExhibition);
                 })
                 .orElse(ResponseEntity.notFound().build());

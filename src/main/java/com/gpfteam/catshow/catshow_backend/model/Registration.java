@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.util.List;
+import java.time.LocalDateTime;
+import org.hibernate.annotations.CreationTimestamp;
 
 @Data
 @Builder
@@ -18,11 +20,23 @@ public class Registration {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+
     private String registrationNumber;
+
+    public enum RegistrationStatus {
+        PLANNED,  // Čeká na zpracování / platbu
+        CONFIRMED, // Potvrzeno, zaplaceno
+        REJECTED,  // Zamítnuto
+        CANCELLED  // Zrušeno uživatelem
+    }
+
+    @Enumerated(EnumType.STRING) // Uloží do DB text ("PLANNED") místo čísla (0)
+    @Column(nullable = false)
+    private RegistrationStatus status;
 
     @ManyToOne
     @JoinColumn(name = "exhibition_id", nullable = false)
-    private Exhibition exhibition;
+    private Show exhibition;
 
     @Column(nullable = false)
     private String days;
@@ -40,6 +54,10 @@ public class Registration {
 
     @Column(columnDefinition = "TEXT")
     private String notes;
+
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
     private boolean dataAccuracy;
     private boolean gdprConsent;

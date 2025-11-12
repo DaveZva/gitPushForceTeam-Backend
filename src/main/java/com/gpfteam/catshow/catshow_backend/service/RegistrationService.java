@@ -18,17 +18,20 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class RegistrationService {
 
-    private final ExhibitionRepository exhibitionRepository;
+    private final ShowRepository showRepository;
     private final RegistrationRepository registrationRepository;
     private final BreederRepository breederRepository;
     private final ExhibitorRepository exhibitorRepository;
 
+
     @Transactional
     public RegistrationResponse submitRegistration(RegistrationPayload payload) {
 
-        Exhibition exhibition = exhibitionRepository.findById(Long.parseLong(payload.getShow().getId()))
+        // 1. Najdeme výstavu
+        Show show = showRepository.findById(Long.parseLong(payload.getShow().getId()))
                 .orElseThrow(() -> new IllegalArgumentException("Výstava s ID " + payload.getShow().getId() + " nenalezena."));
 
+        // 2. Zpracujeme chovatele (Breeder)
         PersonPayload bData = payload.getBreeder();
 
         Breeder breeder = breederRepository.findByEmail(bData.getEmail())
@@ -45,10 +48,12 @@ public class RegistrationService {
                     return breederRepository.save(newBreeder);
                 });
 
-        Exhibitor exhibitor = null;
-        if (payload.getExhibitor() != null) {
-            PersonPayload eData = payload.getExhibitor();
+        // 3. Zpracujeme vystavovatele (Exhibitor)
+        Exhibitor exhibitor; // Odebereme ' = null '
 
+        if (payload.getExhibitor() != null) {
+            // Případ 1: Vystavovatel je jiná osoba
+            PersonPayload eData = payload.getExhibitor();
             exhibitor = Exhibitor.builder()
                     .firstName(eData.getFirstName())
                     .lastName(eData.getLastName())
@@ -58,32 +63,51 @@ public class RegistrationService {
                     .email(eData.getEmail())
                     .phone(eData.getPhone())
                     .build();
-            exhibitorRepository.save(exhibitor);
+        } else {
+            // Případ 2: Vystavovatel je shodný s chovatelem (payload.getExhibitor() je null)
+            // Vytvoříme novou Exhibitor entitu s daty z chovatele ('bData')
+            exhibitor = Exhibitor.builder()
+                    .firstName(bData.getFirstName()) // Data z chovatele
+                    .lastName(bData.getLastName())  // Data z chovatele
+                    .address(bData.getAddress())    // Data z chovatele
+                    .zip(bData.getZip())            // Data z chovatele
+                    .city(bData.getCity())          // Data z chovatele
+                    .email(bData.getEmail())        // Data z chovatele
+                    .phone(bData.getPhone())        // Data z chovatele
+                    .build();
         }
 
+        // Uložíme vystavovatele (ať už je to nová osoba nebo kopie chovatele)
+        exhibitorRepository.save(exhibitor);
+
+        // 4. Vytvoříme hlavní entitu Registration
         Registration registration = Registration.builder()
-                .exhibition(exhibition)
+                .exhibition(show)
                 .days(payload.getShow().getDays())
                 .breeder(breeder)
                 .exhibitor(exhibitor)
                 .notes(payload.getNotes())
                 .dataAccuracy(payload.getConsents().getOrDefault("dataAccuracy", false))
                 .gdprConsent(payload.getConsents().getOrDefault("gdpr", false))
+                .status(Registration.RegistrationStatus.PLANNED)
                 .build();
 
+        // 5. Vytvoříme seznam koček a propojíme je s registrací
         Registration finalRegistration = registration;
         List<Cat> cats = payload.getCats().stream()
                 .map(catPayload -> mapCatPayloadToEntity(catPayload, finalRegistration))
                 .collect(Collectors.toList());
 
         registration.setCats(cats);
-
+// 6. Uložíme registraci s DOČASNOU hodnotou, abychom splnili NOT NULL
+        registration.setRegistrationNumber("PLANNED-" + System.currentTimeMillis()); // Dočasná unikátní hodnota
         Registration savedRegistration = registrationRepository.save(registration);
 
+        // 7. Vygenerujeme finální registrační číslo pomocí ID
         String regNumber = "REG-" + Year.now().getValue() + "-" + savedRegistration.getId();
 
         savedRegistration.setRegistrationNumber(regNumber);
-        registrationRepository.save(savedRegistration);
+        registrationRepository.save(savedRegistration); // Toto je druhý, finální save
 
         return RegistrationResponse.builder()
                 .registrationNumber(regNumber)
@@ -91,21 +115,33 @@ public class RegistrationService {
     }
 
     private Cat mapCatPayloadToEntity(CatPayload cData, Registration reg) {
+
+        // Převod stringů na Enumy. .toUpperCase() zajistí shodu.
+        Cat.Gender genderEnum = Cat.Gender.valueOf(cData.getGender().toUpperCase());
+        Cat.Neutered neuteredEnum = Cat.Neutered.valueOf(cData.getNeutered().toUpperCase());
+        Cat.CageType cageTypeEnum = Cat.CageType.valueOf(cData.getCageType().toUpperCase());
+
+        // Pro třídy musíme nahradit pomlčky podtržítky
+        String showClassString = cData.getShowClass().toUpperCase().replace("-", "_");
+        Cat.ShowClass showClassEnum = Cat.ShowClass.valueOf(showClassString);
+
         return Cat.builder()
                 .registration(reg)
 
+                // --- Základní údaje s Enumy ---
                 .titleBefore(cData.getTitleBefore())
                 .catName(cData.getCatName())
                 .titleAfter(cData.getTitleAfter())
                 .chipNumber(cData.getChipNumber())
-                .gender(cData.getGender())
-                .neutered(cData.getNeutered())
+                .gender(genderEnum)         // Použijeme Enum
+                .neutered(neuteredEnum)     // Použijeme Enum
                 .emsCode(cData.getEmsCode())
                 .birthDate(cData.getBirthDate())
-                .showClass(cData.getShowClass())
+                .showClass(showClassEnum)   // Použijeme Enum
                 .pedigreeNumber(cData.getPedigreeNumber())
-                .cageType(cData.getCageType())
+                .cageType(cageTypeEnum)     // Použijeme Enum
 
+                // --- Matka ---
                 .motherTitleBefore(cData.getMotherTitleBefore())
                 .motherName(cData.getMotherName())
                 .motherTitleAfter(cData.getMotherTitleAfter())
@@ -114,6 +150,7 @@ public class RegistrationService {
                 .motherColor(cData.getMotherColor())
                 .motherPedigreeNumber(cData.getMotherPedigreeNumber())
 
+                // --- Otec ---
                 .fatherTitleBefore(cData.getFatherTitleBefore())
                 .fatherName(cData.getFatherName())
                 .fatherTitleAfter(cData.getFatherTitleAfter())
