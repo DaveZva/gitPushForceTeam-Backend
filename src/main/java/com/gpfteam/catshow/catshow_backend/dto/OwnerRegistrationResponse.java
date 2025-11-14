@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 public class OwnerRegistrationResponse {
     private Long id;
     private String registrationNumber;
-    private String exhibitionName;
+    private String showName;
     private LocalDateTime submittedAt;
     private String status;
     private int catCount;

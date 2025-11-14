@@ -9,9 +9,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/auth") // Cesta pro přihlášení a registraci
+@RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*") // Povolíme CORS
+@CrossOrigin(origins = "*")
 public class AuthController {
 
     private final AuthService authService;

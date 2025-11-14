@@ -21,7 +21,6 @@ public class Breeder {
     private String address;
     private String zip;
     private String city;
-    @Column(unique = true)
     private String email;
     private String phone;
 }

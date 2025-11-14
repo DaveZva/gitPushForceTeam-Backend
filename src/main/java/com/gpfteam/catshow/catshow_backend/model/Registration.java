@@ -30,24 +30,24 @@ public class Registration {
         CANCELLED  // Zrušeno uživatelem
     }
 
-    @Enumerated(EnumType.STRING) // Uloží do DB text ("PLANNED") místo čísla (0)
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private RegistrationStatus status;
 
     @ManyToOne
-    @JoinColumn(name = "exhibition_id", nullable = false)
-    private Show exhibition;
+    @JoinColumn(name = "show_id", nullable = false)
+    private Show show;
 
     @Column(nullable = false)
     private String days;
 
-    @ManyToOne(cascade = CascadeType.PERSIST) // Uložíme chovatele, pokud je nový
-    @JoinColumn(name = "breeder_id", nullable = false)
-    private Breeder breeder;
+    @ManyToOne(cascade = CascadeType.PERSIST)
+    @JoinColumn(name = "owner_id", nullable = false)
+    private Owner owner;
 
-    @ManyToOne(cascade = CascadeType.PERSIST) // Uložíme i vystavovatele
-    @JoinColumn(name = "exhibitor_id")
-    private Exhibitor exhibitor;
+    @ManyToOne(cascade = CascadeType.PERSIST)
+    @JoinColumn(name = "breeder_id")
+    private Breeder breeder;
 
     @OneToMany(mappedBy = "registration", cascade = CascadeType.ALL)
     private List<Cat> cats;

@@ -8,8 +8,8 @@ import java.util.Map;
 public class RegistrationPayload {
     private ShowData show;
     private List<CatPayload> cats;
+    private PersonPayload owner;
     private PersonPayload breeder;
-    private PersonPayload exhibitor;
     private String notes;
     private Map<String, Boolean> consents;
 

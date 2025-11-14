@@ -74,9 +74,8 @@ public class Cat {
 
     private String pedigreeNumber; // Zůstává String
 
-    // ZMĚNIT:
     @Enumerated(EnumType.STRING)
-    @Column(name = "cage_type", nullable = false) // 'cage_type' je pravděpodobný název sloupce v DB
+    @Column(name = "cage_type", nullable = false)
     private CageType cageType;
 
     private String motherTitleBefore;

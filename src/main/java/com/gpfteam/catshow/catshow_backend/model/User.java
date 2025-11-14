@@ -16,7 +16,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "_user") // "user" je často rezervované slovo v SQL
+@Table(name = "_user")
 public class User implements UserDetails {
 
     @Id
@@ -26,21 +26,18 @@ public class User implements UserDetails {
     private String firstName;
     private String lastName;
 
-    @Column(unique = true) // Každý email musí být unikátní
+    @Column(unique = true)
     private String email;
 
-    private String password; // Zde bude uložený HASH
+    private String password;
 
-    // Metody z UserDetails
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Můžeme zjednodušit, pro teď nemáme role (např. ADMIN)
         return List.of();
     }
 
     @Override
     public String getUsername() {
-        // Jako "username" budeme používat email
         return email;
     }
 
@@ -49,7 +46,6 @@ public class User implements UserDetails {
         return password;
     }
 
-    // Pro zjednodušení můžeme nechat vše na 'true'
     @Override
     public boolean isAccountNonExpired() { return true; }
     @Override

@@ -10,7 +10,7 @@ spring:
   
   jpa:
     hibernate:
-      ddl-auto: update  # Pro development, v produkci použít 'validate'
+      ddl-auto: update  # Pro development, v produkci použít 'validate' 'update' 'create-drop'
     show-sql: true
     properties:
       hibernate:

@@ -10,4 +10,6 @@ public class PersonPayload {
     private String city;
     private String email;
     private String phone;
+    private String ownerLocalOrganization;
+    private String ownerMembershipNumber;
 }
