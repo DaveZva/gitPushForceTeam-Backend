@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -28,5 +30,25 @@ public class AuthController {
             @RequestBody LoginRequest request
     ) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> payload) {
+        String email = payload.get("email");
+        authService.forgotPassword(email);
+        return ResponseEntity.ok().body(Map.of("message", "Pokud email existuje, instrukce byly odeslány."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> payload) {
+        String token = payload.get("token");
+        String newPassword = payload.get("newPassword");
+
+        boolean success = authService.resetPassword(token, newPassword);
+        if (success) {
+            return ResponseEntity.ok().body(Map.of("message", "Heslo bylo úspěšně změněno."));
+        } else {
+            return ResponseEntity.badRequest().body(Map.of("message", "Neplatný nebo expirovaný token."));
+        }
     }
 }
