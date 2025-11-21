@@ -10,4 +10,6 @@ public class AuthResponse {
     private String firstName;
     private String lastName;
     private String email;
+    private String role;
+    private boolean requirePasswordChange;
 }

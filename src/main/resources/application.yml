@@ -7,7 +7,19 @@ spring:
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
-  
+
+  mail:
+    host: sandbox.smtp.mailtrap.io
+    port: 2525
+    username: "408901e698564a"
+    password: "e9aa3c0fc19389"
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
   jpa:
     hibernate:
       ddl-auto: update  # Pro development, v produkci použít 'validate' 'update' 'create-drop'

@@ -36,6 +36,7 @@ public class AuthService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.USER)
+                .requirePasswordChange(false)
                 .build();
 
         userRepository.save(user);
@@ -47,6 +48,8 @@ public class AuthService {
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
+                .role(user.getRole().name())
+                .requirePasswordChange(user.isRequirePasswordChange())
                 .build();
     }
 
@@ -68,6 +71,8 @@ public class AuthService {
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
+                .role(user.getRole().name())
+                .requirePasswordChange(user.isRequirePasswordChange())
                 .build();
     }
     public void forgotPassword(String email) {
