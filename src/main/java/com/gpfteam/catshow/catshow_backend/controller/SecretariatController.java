@@ -46,7 +46,7 @@ public class SecretariatController {
      */
     @PostMapping
     public ResponseEntity<Show> createExhibition(@RequestBody Show exhibition) {
-        exhibition.setId(null); // Zajistíme, že vytváříme novou
+        exhibition.setId(null);
         if (exhibition.getStatus() == null) {
             exhibition.setStatus(Show.ShowStatus.PLANNED);
         }
@@ -62,7 +62,6 @@ public class SecretariatController {
     public ResponseEntity<Show> updateExhibition(@PathVariable Long id, @RequestBody Show exhibitionDetails) {
         return exhibitionRepository.findById(id)
                 .map(existingExhibition -> {
-                    // Zkopírujeme všechna pole
                     existingExhibition.setName(exhibitionDetails.getName());
                     existingExhibition.setDescription(exhibitionDetails.getDescription());
                     existingExhibition.setStatus(exhibitionDetails.getStatus());

@@ -72,10 +72,8 @@ public class RegistrationService {
                     .build();
         }
 
-        // Uložíme vystavovatele (ať už je to nová osoba nebo kopie chovatele)
         breederRepository.save(breeder);
 
-        // 4. Vytvoříme hlavní entitu Registration
         Registration registration = Registration.builder()
                 .show(show)
                 .days(payload.getShow().getDays())

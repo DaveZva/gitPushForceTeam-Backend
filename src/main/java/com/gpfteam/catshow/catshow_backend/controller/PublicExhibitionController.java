@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/exhibitions") // Veřejná cesta
+@RequestMapping("/api/v1/exhibitions")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class PublicExhibitionController {

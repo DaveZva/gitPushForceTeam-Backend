@@ -43,7 +43,6 @@ public class ApplicationConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        // TOTO JE "SPRÁVNÝ" ZPŮSOB UKLÁDÁNÍ HESEL (hashování)
         return new BCryptPasswordEncoder();
     }
 }
