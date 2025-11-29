@@ -20,7 +20,6 @@ public class Registration {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-
     private String registrationNumber;
 
     public enum RegistrationStatus {
@@ -61,4 +60,11 @@ public class Registration {
 
     private boolean dataAccuracy;
     private boolean gdprConsent;
+
+    @Column(name = "stripe_payment_intent_id")
+    private String stripePaymentIntentId;
+
+    private Long amountPaid; // Ukládáme v haléřích
+
+    private LocalDateTime paidAt;
 }
