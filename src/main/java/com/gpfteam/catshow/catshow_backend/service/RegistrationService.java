@@ -9,7 +9,8 @@ import com.gpfteam.catshow.catshow_backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.gpfteam.catshow.catshow_backend.dto.RegistrationDetailResponse;
+import org.springframework.security.core.context.SecurityContextHolder;
 import java.time.Year;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -26,8 +27,6 @@ public class RegistrationService {
 
     @Transactional
     public RegistrationResponse submitRegistration(RegistrationPayload payload) {
-
-        // 1. Najdeme výstavu
         Show show = showRepository.findById(Long.parseLong(payload.getShow().getId()))
                 .orElseThrow(() -> new IllegalArgumentException("Výstava s ID " + payload.getShow().getId() + " nenalezena."));
 
@@ -62,13 +61,13 @@ public class RegistrationService {
                     .build();
         } else {
             breeder = Breeder.builder()
-                    .firstName(bData.getFirstName()) // Data z chovatele
-                    .lastName(bData.getLastName())  // Data z chovatele
-                    .address(bData.getAddress())    // Data z chovatele
-                    .zip(bData.getZip())            // Data z chovatele
-                    .city(bData.getCity())          // Data z chovatele
-                    .email(bData.getEmail())        // Data z chovatele
-                    .phone(bData.getPhone())        // Data z chovatele
+                    .firstName(bData.getFirstName())
+                    .lastName(bData.getLastName())
+                    .address(bData.getAddress())
+                    .zip(bData.getZip())
+                    .city(bData.getCity())
+                    .email(bData.getEmail())
+                    .phone(bData.getPhone())
                     .build();
         }
 
@@ -143,6 +142,25 @@ public class RegistrationService {
                 .fatherEmsCode(cData.getFatherEmsCode())
                 .fatherColor(cData.getFatherColor())
                 .fatherPedigreeNumber(cData.getFatherPedigreeNumber())
+                .build();
+    }
+    public RegistrationDetailResponse getRegistrationDetail(Long id) {
+        Registration registration = registrationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Registrace nenalezena"));
+
+        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        if (!registration.getOwner().getEmail().equalsIgnoreCase(currentUserEmail)) {
+            throw new RuntimeException("Nemáte oprávnění zobrazit tuto registraci.");
+        }
+
+        return RegistrationDetailResponse.builder()
+                .id(registration.getId())
+                .registrationNumber(registration.getRegistrationNumber())
+                .status(registration.getStatus())
+                .amountPaid(registration.getAmountPaid())
+                .paidAt(registration.getPaidAt())
+                .showName(registration.getShow().getName())
                 .build();
     }
 }
