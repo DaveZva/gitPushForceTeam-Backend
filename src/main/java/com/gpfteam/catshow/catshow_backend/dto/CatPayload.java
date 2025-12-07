@@ -21,14 +21,16 @@ public class CatPayload {
     private String motherTitleAfter;
     private String motherBreed;
     private String motherEmsCode;
-    private String motherColor;
     private String motherPedigreeNumber;
+    private String motherBirthDate;
+    private String motherChipNumber;
 
     private String fatherTitleBefore;
     private String fatherName;
     private String fatherTitleAfter;
     private String fatherBreed;
     private String fatherEmsCode;
-    private String fatherColor;
     private String fatherPedigreeNumber;
+    private String fatherBirthDate;
+    private String fatherChipNumber;
 }
