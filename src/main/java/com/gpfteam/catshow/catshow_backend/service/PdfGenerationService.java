@@ -1,15 +1,13 @@
 package com.gpfteam.catshow.catshow_backend.service;
 
-import com.gpfteam.catshow.catshow_backend.model.Breeder;
-import com.gpfteam.catshow.catshow_backend.model.Cat;
-import com.gpfteam.catshow.catshow_backend.model.Owner;
-import com.gpfteam.catshow.catshow_backend.model.Registration;
+import com.gpfteam.catshow.catshow_backend.model.*;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.springframework.stereotype.Service;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -59,7 +57,6 @@ public class PdfGenerationService {
             drawInfoBox(reg);
             yPosition -= 20;
 
-            // Sekce s detaily
             addModernSection("Informace o registraci", PRIMARY_COLOR);
             addInfoRow("Číslo přihlášky", reg.getRegistrationNumber(), true);
             addInfoRow("Výstava", reg.getShow().getName(), false);
@@ -68,7 +65,6 @@ public class PdfGenerationService {
             addInfoRow("Dny účasti", reg.getDays().toUpperCase(), false);
             yPosition -= 25;
 
-            // Majitel
             addModernSection("Majitel", PRIMARY_COLOR);
             Owner owner = reg.getOwner();
             addInfoRow("Jméno a příjmení", owner.getFirstName() + " " + owner.getLastName(), true);
@@ -84,7 +80,6 @@ public class PdfGenerationService {
             addInfoRow("Členské číslo", member, false);
             yPosition -= 25;
 
-            // Chovatel (pokud se liší)
             Breeder breeder = reg.getBreeder();
             if (breeder != null && !Objects.equals(breeder.getEmail(), owner.getEmail())) {
                 addModernSection("Chovatel", PRIMARY_COLOR);
@@ -93,20 +88,21 @@ public class PdfGenerationService {
                 yPosition -= 25;
             }
 
-            // Kočky
-            addModernSection("Registrované kočky (" + reg.getCats().size() + ")", ACCENT_COLOR);
+            int entriesCount = reg.getEntries() != null ? reg.getEntries().size() : 0;
+            addModernSection("Registrované kočky (" + entriesCount + ")", ACCENT_COLOR);
             yPosition -= 5;
 
             int catCount = 0;
-            for (Cat cat : reg.getCats()) {
-                if (catCount > 0) {
-                    yPosition -= 10;
+            if (reg.getEntries() != null) {
+                for (RegistrationEntry entry : reg.getEntries()) {
+                    if (catCount > 0) {
+                        yPosition -= 10;
+                    }
+                    drawCatCard(entry, catCount + 1); // Posíláme entry
+                    catCount++;
                 }
-                drawCatCard(cat, catCount + 1);
-                catCount++;
             }
 
-            // Zápatí
             drawFooter();
 
             contentStream.close();
@@ -130,12 +126,10 @@ public class PdfGenerationService {
     }
 
     private void drawHeader() throws IOException {
-        // Horní barevný pás
         contentStream.setNonStrokingColor(PRIMARY_COLOR[0], PRIMARY_COLOR[1], PRIMARY_COLOR[2]);
         contentStream.addRect(0, pageHeight - 60, 595, 60);
         contentStream.fill();
 
-        // Logo text / název aplikace
         contentStream.setNonStrokingColor(1f, 1f, 1f);
         contentStream.beginText();
         contentStream.setFont(fontBold, 24);
@@ -143,7 +137,6 @@ public class PdfGenerationService {
         contentStream.showText("CatShow");
         contentStream.endText();
 
-        // Dekorativní akcent
         contentStream.setNonStrokingColor(ACCENT_COLOR[0], ACCENT_COLOR[1], ACCENT_COLOR[2]);
         contentStream.addRect(pageMargin, pageHeight - 48, 80, 3);
         contentStream.fill();
@@ -176,18 +169,15 @@ public class PdfGenerationService {
         float boxHeight = 50;
         float boxY = yPosition - boxHeight;
 
-        // Pozadí boxu
         contentStream.setNonStrokingColor(LIGHT_BG[0], LIGHT_BG[1], LIGHT_BG[2]);
         contentStream.addRect(pageMargin, boxY, pageWidth, boxHeight);
         contentStream.fill();
 
-        // Bordura
         contentStream.setStrokingColor(BORDER_COLOR[0], BORDER_COLOR[1], BORDER_COLOR[2]);
         contentStream.setLineWidth(1f);
         contentStream.addRect(pageMargin, boxY, pageWidth, boxHeight);
         contentStream.stroke();
 
-        // Levá strana - ikona a číslo
         contentStream.setNonStrokingColor(PRIMARY_COLOR[0], PRIMARY_COLOR[1], PRIMARY_COLOR[2]);
         contentStream.addRect(pageMargin, boxY, 4, boxHeight);
         contentStream.fill();
@@ -205,7 +195,6 @@ public class PdfGenerationService {
         contentStream.showText(reg.getRegistrationNumber());
         contentStream.endText();
 
-        // Pravá strana - datum
         String dateStr = reg.getCreatedAt().format(DateTimeFormatter.ofPattern("d. M. yyyy"));
         contentStream.setNonStrokingColor(TEXT_LIGHT[0], TEXT_LIGHT[1], TEXT_LIGHT[2]);
         contentStream.beginText();
@@ -220,12 +209,10 @@ public class PdfGenerationService {
     }
 
     private void addModernSection(String title, float[] color) throws IOException {
-        // Barevná bordura vlevo
         contentStream.setNonStrokingColor(color[0], color[1], color[2]);
         contentStream.addRect(pageMargin, yPosition - 18, 3, 20);
         contentStream.fill();
 
-        // Nadpis sekce
         contentStream.setNonStrokingColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2]);
         contentStream.beginText();
         contentStream.setFont(fontBold, 14);
@@ -240,7 +227,6 @@ public class PdfGenerationService {
             yPosition -= 14;
         }
 
-        // Label
         contentStream.setNonStrokingColor(TEXT_LIGHT[0], TEXT_LIGHT[1], TEXT_LIGHT[2]);
         contentStream.beginText();
         contentStream.setFont(fontRegular, 9);
@@ -248,7 +234,6 @@ public class PdfGenerationService {
         contentStream.showText(label.toUpperCase());
         contentStream.endText();
 
-        // Value
         contentStream.setNonStrokingColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2]);
         contentStream.beginText();
         contentStream.setFont(fontRegular, 11);
@@ -259,13 +244,13 @@ public class PdfGenerationService {
         yPosition -= 12;
     }
 
-    private void drawCatCard(Cat cat, int number) throws IOException {
+    private void drawCatCard(RegistrationEntry entry, int number) throws IOException {
+        Cat cat = entry.getCat();
+
         float cardHeight = 140;
         float cardY = yPosition - cardHeight;
 
-        // Kontrola prostoru na stránce
         if (cardY < 100) {
-            // Nedostatek místa, přidáme novou stránku
             contentStream.close();
             PDPage newPage = new PDPage(PDRectangle.A4);
             document.addPage(newPage);
@@ -274,18 +259,15 @@ public class PdfGenerationService {
             cardY = yPosition - cardHeight;
         }
 
-        // Pozadí karty
         contentStream.setNonStrokingColor(1f, 1f, 1f);
         contentStream.addRect(pageMargin, cardY, pageWidth, cardHeight);
         contentStream.fill();
 
-        // Bordura
         contentStream.setStrokingColor(BORDER_COLOR[0], BORDER_COLOR[1], BORDER_COLOR[2]);
         contentStream.setLineWidth(1f);
         contentStream.addRect(pageMargin, cardY, pageWidth, cardHeight);
         contentStream.stroke();
 
-        // Číslo kočky
         contentStream.setNonStrokingColor(ACCENT_COLOR[0], ACCENT_COLOR[1], ACCENT_COLOR[2]);
         contentStream.beginText();
         contentStream.setFont(fontBold, 11);
@@ -293,7 +275,6 @@ public class PdfGenerationService {
         contentStream.showText("KOČKA #" + number);
         contentStream.endText();
 
-        // Jméno kočky
         String catName = (cat.getTitleBefore() != null && !cat.getTitleBefore().isEmpty() ? cat.getTitleBefore() + " " : "") +
                 cat.getCatName() +
                 (cat.getTitleAfter() != null && !cat.getTitleAfter().isEmpty() ? " " + cat.getTitleAfter() : "");
@@ -305,7 +286,6 @@ public class PdfGenerationService {
         contentStream.showText(catName.trim());
         contentStream.endText();
 
-        // Tenká oddělovací čára
         contentStream.setStrokingColor(BORDER_COLOR[0], BORDER_COLOR[1], BORDER_COLOR[2]);
         contentStream.setLineWidth(0.5f);
         contentStream.moveTo(pageMargin + 10, cardY + cardHeight - 45);
@@ -316,16 +296,18 @@ public class PdfGenerationService {
         float col1X = pageMargin + 10;
         float col2X = pageMargin + pageWidth / 2 + 5;
 
-        // Levý sloupec
         addCardDetail("EMS kód", cat.getEmsCode(), col1X, detailY);
         addCardDetail("Datum narození", cat.getBirthDate(), col1X, detailY - 25);
-        addCardDetail("Třída", translateClass(cat.getShowClass().name()), col1X, detailY - 50);
+
+        addCardDetail("Třída", translateClass(entry.getShowClass().name()), col1X, detailY - 50);
+
         addCardDetail("Matka", cat.getMotherName() != null && !cat.getMotherName().isEmpty() ? cat.getMotherName() : "—", col1X, detailY - 75);
 
-        // Pravý sloupec
         addCardDetail("Pohlaví", translateGender(cat.getGender().name()), col2X, detailY);
-        addCardDetail("Kastrovaná", translateNeutered(cat.getNeutered().name()), col2X, detailY - 25);
-        addCardDetail("Typ klece", translateCageType(cat.getCageType().name()), col2X, detailY - 50);
+
+        addCardDetail("Kastrovaná", translateNeutered(entry.isNeutered()), col2X, detailY - 25);
+        addCardDetail("Typ klece", translateCageType(entry.getCageType().name()), col2X, detailY - 50);
+
         addCardDetail("Otec", cat.getFatherName() != null && !cat.getFatherName().isEmpty() ? cat.getFatherName() : "—", col2X, detailY - 75);
 
         yPosition = cardY - 15;
@@ -385,21 +367,19 @@ public class PdfGenerationService {
         };
     }
 
-    private String translateNeutered(String neutered) {
-        return switch (neutered) {
-            case "YES" -> "Ano";
-            case "NO" -> "Ne";
-            default -> neutered;
-        };
+    private String translateNeutered(boolean isNeutered) {
+        return isNeutered ? "Ano" : "Ne";
     }
 
     private String translateClass(String showClass) {
-        // Přidejte podle vašich skutečných tříd
         return showClass;
     }
 
     private String translateCageType(String cageType) {
         return switch (cageType) {
+            case "OWN_CAGE" -> "Vlastní klec";
+            case "RENT_SMALL" -> "Pronájem - Malá";
+            case "RENT_LARGE" -> "Pronájem - Velká";
             case "SINGLE" -> "Jednoduchá";
             case "DOUBLE" -> "Dvojitá";
             default -> cageType;

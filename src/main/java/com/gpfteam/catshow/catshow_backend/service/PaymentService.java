@@ -66,7 +66,7 @@ public class PaymentService {
         long basePrice = 50000; // 500 CZK základ
         long catPrice = 30000;  // 300 CZK za kočku
 
-        int catCount = registration.getCats() != null ? registration.getCats().size() : 0;
+        int catCount = registration.getEntries() != null ? registration.getEntries().size() : 0;
         return basePrice + (catPrice * catCount);
     }
 

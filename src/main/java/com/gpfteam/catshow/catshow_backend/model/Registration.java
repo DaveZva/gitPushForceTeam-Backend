@@ -49,7 +49,7 @@ public class Registration {
     private Breeder breeder;
 
     @OneToMany(mappedBy = "registration", cascade = CascadeType.ALL)
-    private List<Cat> cats;
+    private List<RegistrationEntry> entries;
 
     @Column(columnDefinition = "TEXT")
     private String notes;
@@ -64,7 +64,7 @@ public class Registration {
     @Column(name = "stripe_payment_intent_id")
     private String stripePaymentIntentId;
 
-    private Long amountPaid; // Ukládáme v haléřích
+    private Long amountPaid; //halere
 
     private LocalDateTime paidAt;
 }

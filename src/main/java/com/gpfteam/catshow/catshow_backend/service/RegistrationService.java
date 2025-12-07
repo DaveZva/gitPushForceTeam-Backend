@@ -2,18 +2,22 @@ package com.gpfteam.catshow.catshow_backend.service;
 
 import com.gpfteam.catshow.catshow_backend.dto.CatPayload;
 import com.gpfteam.catshow.catshow_backend.dto.PersonPayload;
+import com.gpfteam.catshow.catshow_backend.dto.RegistrationDetailResponse;
 import com.gpfteam.catshow.catshow_backend.dto.RegistrationPayload;
 import com.gpfteam.catshow.catshow_backend.dto.RegistrationResponse;
 import com.gpfteam.catshow.catshow_backend.model.*;
 import com.gpfteam.catshow.catshow_backend.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Example;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.gpfteam.catshow.catshow_backend.dto.RegistrationDetailResponse;
-import org.springframework.security.core.context.SecurityContextHolder;
+
 import java.time.Year;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -23,15 +27,17 @@ public class RegistrationService {
     private final RegistrationRepository registrationRepository;
     private final BreederRepository breederRepository;
     private final OwnerRepository ownerRepository;
-
+    private final CatRepository catRepository;
+    private final UserRepository userRepository;
 
     @Transactional
     public RegistrationResponse submitRegistration(RegistrationPayload payload) {
+        // 1. Načtení výstavy
         Show show = showRepository.findById(Long.parseLong(payload.getShow().getId()))
                 .orElseThrow(() -> new IllegalArgumentException("Výstava s ID " + payload.getShow().getId() + " nenalezena."));
 
+        // 2. Zpracování majitele (pro registraci - kontakt)
         PersonPayload bData = payload.getOwner();
-
         Owner owner = ownerRepository.findByEmail(bData.getEmail())
                 .orElseGet(() -> {
                     Owner newOwner = Owner.builder()
@@ -46,8 +52,8 @@ public class RegistrationService {
                     return ownerRepository.save(newOwner);
                 });
 
+        // 3. Zpracování chovatele
         Breeder breeder;
-
         if (payload.getBreeder() != null) {
             PersonPayload eData = payload.getBreeder();
             breeder = Breeder.builder()
@@ -60,6 +66,7 @@ public class RegistrationService {
                     .phone(eData.getPhone())
                     .build();
         } else {
+            // Pokud není chovatel vyplněn, použijeme údaje majitele (běžná praxe, pokud si chovají sami)
             breeder = Breeder.builder()
                     .firstName(bData.getFirstName())
                     .lastName(bData.getLastName())
@@ -70,9 +77,9 @@ public class RegistrationService {
                     .phone(bData.getPhone())
                     .build();
         }
-
         breederRepository.save(breeder);
 
+        // 4. Vytvoření hlavičky registrace
         Registration registration = Registration.builder()
                 .show(show)
                 .days(payload.getShow().getDays())
@@ -84,66 +91,119 @@ public class RegistrationService {
                 .status(Registration.RegistrationStatus.PLANNED)
                 .build();
 
-        Registration finalRegistration = registration;
-        List<Cat> cats = payload.getCats().stream()
-                .map(catPayload -> mapCatPayloadToEntity(catPayload, finalRegistration))
-                .collect(Collectors.toList());
+        // 5. Získání aktuálního uživatele (pro přiřazení koček k profilu)
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = null;
+        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
+            currentUser = userRepository.findByEmail(auth.getName()).orElse(null);
+        }
 
-        registration.setCats(cats);
-        registration.setRegistrationNumber("PLANNED-" + System.currentTimeMillis()); // Dočasná unikátní hodnota
+        // 6. Zpracování koček (Profil + Entry)
+        List<RegistrationEntry> entries = new ArrayList<>();
+
+        for (CatPayload cData : payload.getCats()) {
+            // A) Najdi nebo vytvoř profil kočky (Cat)
+            Cat cat = findOrCreateCat(cData, currentUser);
+
+            // B) Vytvoř položku přihlášky (RegistrationEntry)
+            RegistrationEntry entry = mapToEntry(cData, registration, cat);
+            entries.add(entry);
+        }
+
+        registration.setEntries(entries);
+
+        // Dočasné ID pro uložení
+        registration.setRegistrationNumber("PLANNED-" + System.currentTimeMillis());
         Registration savedRegistration = registrationRepository.save(registration);
 
+        // Finální vygenerování čísla přihlášky
         String regNumber = "REG-" + Year.now().getValue() + "-" + savedRegistration.getId();
-
         savedRegistration.setRegistrationNumber(regNumber);
-        registrationRepository.save(savedRegistration); // Toto je druhý, finální save
+        registrationRepository.save(savedRegistration);
 
         return RegistrationResponse.builder()
                 .registrationNumber(regNumber)
                 .build();
     }
 
-    private Cat mapCatPayloadToEntity(CatPayload cData, Registration reg) {
+    /**
+     * Pokusí se najít existující kočku pro uživatele (podle čipu nebo jména).
+     * Pokud nenajde, vytvoří novou.
+     */
+    private Cat findOrCreateCat(CatPayload cData, User user) {
+        if (user != null) {
+            Cat probe = new Cat();
+            probe.setOwnerUser(user);
+
+            // Prioritně hledáme podle čipu
+            if (cData.getChipNumber() != null && !cData.getChipNumber().isEmpty()) {
+                probe.setChipNumber(cData.getChipNumber());
+            } else {
+                probe.setCatName(cData.getCatName());
+            }
+
+            Optional<Cat> existing = catRepository.findOne(Example.of(probe));
+            if (existing.isPresent()) {
+                return existing.get();
+            }
+        }
 
         Cat.Gender genderEnum = Cat.Gender.valueOf(cData.getGender().toUpperCase());
-        Cat.Neutered neuteredEnum = Cat.Neutered.valueOf(cData.getNeutered().toUpperCase());
-        Cat.CageType cageTypeEnum = Cat.CageType.valueOf(cData.getCageType().toUpperCase());
 
-        String showClassString = cData.getShowClass().toUpperCase().replace("-", "_");
-        Cat.ShowClass showClassEnum = Cat.ShowClass.valueOf(showClassString);
-
-        return Cat.builder()
-                .registration(reg)
-
-                .titleBefore(cData.getTitleBefore())
+        Cat newCat = Cat.builder()
+                .ownerUser(user)
+                // Kočka
                 .catName(cData.getCatName())
+                .titleBefore(cData.getTitleBefore())
                 .titleAfter(cData.getTitleAfter())
                 .chipNumber(cData.getChipNumber())
                 .gender(genderEnum)
-                .neutered(neuteredEnum)
                 .emsCode(cData.getEmsCode())
                 .birthDate(cData.getBirthDate())
-                .showClass(showClassEnum)
                 .pedigreeNumber(cData.getPedigreeNumber())
-                .cageType(cageTypeEnum)
-
-                .motherTitleBefore(cData.getMotherTitleBefore())
-                .motherName(cData.getMotherName())
-                .motherTitleAfter(cData.getMotherTitleAfter())
-                .motherBreed(cData.getMotherBreed())
-                .motherEmsCode(cData.getMotherEmsCode())
-                .motherColor(cData.getMotherColor())
-                .motherPedigreeNumber(cData.getMotherPedigreeNumber())
 
                 .fatherTitleBefore(cData.getFatherTitleBefore())
                 .fatherName(cData.getFatherName())
                 .fatherTitleAfter(cData.getFatherTitleAfter())
-                .fatherBreed(cData.getFatherBreed())
                 .fatherEmsCode(cData.getFatherEmsCode())
-                .fatherColor(cData.getFatherColor())
+                .fatherBirthDate(cData.getFatherBirthDate())
+                .fatherChipNumber(cData.getFatherChipNumber())
                 .fatherPedigreeNumber(cData.getFatherPedigreeNumber())
+
+                .motherTitleBefore(cData.getMotherTitleBefore())
+                .motherName(cData.getMotherName())
+                .motherTitleAfter(cData.getMotherTitleAfter())
+                .motherEmsCode(cData.getMotherEmsCode())
+                .motherBirthDate(cData.getMotherBirthDate())
+                .motherChipNumber(cData.getMotherChipNumber())
+                .motherPedigreeNumber(cData.getMotherPedigreeNumber())
+
                 .build();
+
+        return catRepository.save(newCat);
     }
+
+    private RegistrationEntry mapToEntry(CatPayload cData, Registration reg, Cat cat) {
+        RegistrationEntry entry = new RegistrationEntry();
+        entry.setRegistration(reg);
+        entry.setCat(cat);
+
+        // ShowClass
+        String showClassString = cData.getShowClass().toUpperCase().replace("-", "_");
+        RegistrationEntry.ShowClass showClassEnum = RegistrationEntry.ShowClass.valueOf(showClassString);
+        entry.setShowClass(showClassEnum);
+
+        // CageType
+        RegistrationEntry.CageType cageTypeEnum = RegistrationEntry.CageType.valueOf(cData.getCageType().toUpperCase());
+        entry.setCageType(cageTypeEnum);
+
+        // Neutered
+        boolean isNeutered = "YES".equalsIgnoreCase(cData.getNeutered()) || "TRUE".equalsIgnoreCase(cData.getNeutered());
+        entry.setNeutered(isNeutered);
+
+        return entry;
+    }
+
     public RegistrationDetailResponse getRegistrationDetail(Long id) {
         Registration registration = registrationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Registrace nenalezena"));

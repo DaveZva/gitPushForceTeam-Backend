@@ -53,7 +53,7 @@ public class RegistrationQueryController {
                 .showName(reg.getShow().getName())
                 .submittedAt(reg.getCreatedAt())
                 .status(reg.getStatus().name())
-                .catCount(reg.getCats() != null ? reg.getCats().size() : 0)
+                .catCount(reg.getEntries() != null ? reg.getEntries().size() : 0)
                 .build();
     }
 
