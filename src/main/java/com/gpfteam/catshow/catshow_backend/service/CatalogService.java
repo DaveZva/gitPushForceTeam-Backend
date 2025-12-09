@@ -1,5 +1,6 @@
 package com.gpfteam.catshow.catshow_backend.service;
 
+import com.gpfteam.catshow.catshow_backend.model.Cat;
 import com.gpfteam.catshow.catshow_backend.model.Registration;
 import com.gpfteam.catshow.catshow_backend.model.RegistrationEntry;
 import com.gpfteam.catshow.catshow_backend.model.Show;
@@ -7,6 +8,7 @@ import com.gpfteam.catshow.catshow_backend.repository.RegistrationEntryRepositor
 import com.gpfteam.catshow.catshow_backend.repository.RegistrationRepository;
 import com.gpfteam.catshow.catshow_backend.repository.ShowRepository;
 import com.gpfteam.catshow.catshow_backend.util.EmsUtility;
+import com.gpfteam.catshow.catshow_backend.dto.QuickCatalogEntryDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -106,5 +108,42 @@ public class CatalogService {
             case DOMESTIC_CAT -> 17;
             default -> 50;
         };
+    }
+
+    public List<QuickCatalogEntryDto> getQuickCatalog(Long showId) {
+        Show show = showRepository.findById(showId)
+                .orElseThrow(() -> new IllegalArgumentException("Show not found"));
+
+        List<Registration> confirmedRegistrations = registrationRepository.findByShowAndStatus(
+                show, Registration.RegistrationStatus.CONFIRMED
+        );
+
+        List<RegistrationEntry> entries = confirmedRegistrations.stream()
+                .flatMap(reg -> reg.getEntries().stream())
+                .filter(e -> e.getCatalogNumber() != null)
+                .collect(Collectors.toList());
+
+        entries.sort(Comparator
+                .comparing((RegistrationEntry e) -> e.getCat().getEmsCode())
+                .thenComparingInt(e -> getClassRank(e.getShowClass()))
+                .thenComparing(e -> e.getCat().getCatName())
+        );
+
+        return entries.stream().map(e -> {
+            Cat c = e.getCat();
+
+            String fullName = (c.getTitleBefore() != null ? c.getTitleBefore() + " " : "")
+                    + c.getCatName()
+                    + (c.getTitleAfter() != null ? " " + c.getTitleAfter() : "");
+
+            return QuickCatalogEntryDto.builder()
+                    .catalogNumber(e.getCatalogNumber())
+                    .catName(fullName.trim())
+                    .gender(c.getGender().name())
+                    .emsCode(c.getEmsCode())
+                    .showClass(e.getShowClass() != null ? e.getShowClass().name() : "")
+                    .category(EmsUtility.getCategory(c.getEmsCode()))
+                    .build();
+        }).collect(Collectors.toList());
     }
 }
