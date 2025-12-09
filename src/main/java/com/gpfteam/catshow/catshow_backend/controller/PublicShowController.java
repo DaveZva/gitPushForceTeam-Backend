@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RequestMapping("/api/v1/exhibitions")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
-public class PublicExhibitionController {
+public class PublicShowController {
 
     private final ShowRepository exhibitionRepository;
     private final RegistrationRepository registrationRepository;

@@ -26,7 +26,7 @@ public class CatalogService {
     private final RegistrationEntryRepository registrationEntryRepository;
 
     @Transactional
-    public void closeShowAndGenerateCatalog(Long showId) {
+    public int closeShowAndGenerateCatalog(Long showId) {
         Show show = showRepository.findById(showId)
                 .orElseThrow(() -> new IllegalArgumentException("Show not found"));
 
@@ -66,6 +66,8 @@ public class CatalogService {
 
         registrationEntryRepository.saveAll(entries);
         log.info("Katalog vygenerován. Očíslováno {} koček.", entries.size());
+
+        return entries.size();
     }
 
     /**
