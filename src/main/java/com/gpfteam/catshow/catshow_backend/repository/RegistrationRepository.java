@@ -1,5 +1,6 @@
 package com.gpfteam.catshow.catshow_backend.repository;
 import com.gpfteam.catshow.catshow_backend.model.Registration;
+import com.gpfteam.catshow.catshow_backend.model.Show;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,4 +16,5 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
     @Query("SELECT r FROM Registration r JOIN FETCH r.entries c " +
             "WHERE r.show.id = :showId AND r.status = 'CONFIRMED'")
     List<Registration> findConfirmedRegistrationsWithCatsByShowId(@Param("showId") Long showId);
+    List<Registration> findByShowAndStatus(Show show, Registration.RegistrationStatus status);
 }

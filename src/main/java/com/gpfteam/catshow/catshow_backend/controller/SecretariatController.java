@@ -2,6 +2,7 @@ package com.gpfteam.catshow.catshow_backend.controller;
 
 import com.gpfteam.catshow.catshow_backend.model.Show;
 import com.gpfteam.catshow.catshow_backend.repository.ShowRepository;
+import com.gpfteam.catshow.catshow_backend.service.CatalogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +15,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class SecretariatController {
-
+    private final CatalogService catalogService;
     private final ShowRepository exhibitionRepository;
 
     /**
@@ -94,5 +95,14 @@ public class SecretariatController {
         }
         exhibitionRepository.deleteById(id);
         return ResponseEntity.noContent().build(); // Status 204
+    }
+
+    @PostMapping("/{id}/generate-catalog")
+    public ResponseEntity<String> generateCatalog(@PathVariable Long id) {
+        if (!exhibitionRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        catalogService.closeShowAndGenerateCatalog(id);
+        return ResponseEntity.ok("Katalog byl úspěšně přegenerován a výstava uzavřena.");
     }
 }
