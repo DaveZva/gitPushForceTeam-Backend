@@ -19,12 +19,10 @@ public class ShowScheduler {
     private final ShowRepository showRepository;
     private final CatalogService catalogService;
 
-    // Spouští se každou hodinu v celou
-    @Scheduled(cron = "0 1 * * * *")
+    @Scheduled(cron = "0 /15 * * * *")
     public void checkShowDeadlines() {
         log.info("Scheduler: Kontrola uzávěrek výstav...");
 
-        // 1. Najdi výstavy, které jsou OPEN a už měly mít uzávěrku
         List<Show> showsToClose = showRepository.findByStatus(Show.ShowStatus.OPEN).stream()
                 .filter(show -> show.getRegistrationDeadline().isBefore(LocalDateTime.now()))
                 .toList();
@@ -34,7 +32,6 @@ public class ShowScheduler {
             return;
         }
 
-        // 2. Pro každou takovou výstavu spusť proces
         for (Show show : showsToClose) {
             log.info("Uzavírám výstavu ID: {} - {}", show.getId(), show.getName());
             try {

@@ -15,83 +15,82 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/secretariat/shows")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class SecretariatController {
     private final CatalogService catalogService;
     private final ShowRepository showRepository;
 
     /**
-     * GET /api/v1/secretariat/exhibition
+     * GET /api/v1/secretariat/show
      * Získá VŠECHNY výstavy pro sekretariát, seřazené
      */
     @GetMapping
-    public ResponseEntity<List<Show>> getAllExhibitionsForSecretariat() {
-        List<Show> allExhibitions = showRepository.findAll(
+    public ResponseEntity<List<Show>> getAllShowsForSecretariat() {
+        List<Show> allShows = showRepository.findAll(
                 Sort.by(Sort.Direction.DESC, "startDate")
         );
-        return ResponseEntity.ok(allExhibitions);
+        return ResponseEntity.ok(allShows);
     }
 
     /**
-     * GET /api/v1/secretariat/exhibition/{id}
+     * GET /api/v1/secretariat/shows/{id}
      * Získá jednu výstavu podle ID (pro editaci)
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Show> getExhibitionById(@PathVariable Long id) {
+    public ResponseEntity<Show> getShowsById(@PathVariable Long id) {
         return showRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     /**
-     * POST /api/v1/secretariat/exhibition
+     * POST /api/v1/secretariat/show
      * Vytvoří novou výstavu
      */
     @PostMapping
-    public ResponseEntity<Show> createExhibition(@RequestBody Show exhibition) {
-        exhibition.setId(null);
-        if (exhibition.getStatus() == null) {
-            exhibition.setStatus(Show.ShowStatus.PLANNED);
+    public ResponseEntity<Show> createShow(@RequestBody Show show) {
+        show.setId(null);
+        if (show.getStatus() == null) {
+            show.setStatus(Show.ShowStatus.PLANNED);
         }
-        Show savedExhibition = showRepository.save(exhibition);
-        return ResponseEntity.status(201).body(savedExhibition);
+        Show savedShow = showRepository.save(show);
+        return ResponseEntity.status(201).body(savedShow);
     }
 
     /**
-     * PUT /api/v1/secretariat/exhibition/{id}
+     * PUT /api/v1/secretariat/show/{id}
      * Aktualizuje existující výstavu
      */
     @PutMapping("/{id}")
-    public ResponseEntity<Show> updateExhibition(@PathVariable Long id, @RequestBody Show exhibitionDetails) {
+    public ResponseEntity<Show> updateShow(@PathVariable Long id, @RequestBody Show showDetails) {
         return showRepository.findById(id)
-                .map(existingExhibition -> {
-                    existingExhibition.setName(exhibitionDetails.getName());
-                    existingExhibition.setDescription(exhibitionDetails.getDescription());
-                    existingExhibition.setStatus(exhibitionDetails.getStatus());
-                    existingExhibition.setVenueName(exhibitionDetails.getVenueName());
-                    existingExhibition.setVenueAddress(exhibitionDetails.getVenueAddress());
-                    existingExhibition.setVenueCity(exhibitionDetails.getVenueCity());
-                    existingExhibition.setVenueState(exhibitionDetails.getVenueState());
-                    existingExhibition.setVenueZip(exhibitionDetails.getVenueZip());
-                    existingExhibition.setStartDate(exhibitionDetails.getStartDate());
-                    existingExhibition.setEndDate(exhibitionDetails.getEndDate());
-                    existingExhibition.setRegistrationDeadline(exhibitionDetails.getRegistrationDeadline());
-                    existingExhibition.setOrganizerName(exhibitionDetails.getOrganizerName());
-                    existingExhibition.setContactEmail(exhibitionDetails.getContactEmail());
-                    existingExhibition.setWebsiteUrl(exhibitionDetails.getWebsiteUrl());
+                .map(existingShow -> {
+                    existingShow.setName(showDetails.getName());
+                    existingShow.setDescription(showDetails.getDescription());
+                    existingShow.setStatus(showDetails.getStatus());
+                    existingShow.setVenueName(showDetails.getVenueName());
+                    existingShow.setVenueAddress(showDetails.getVenueAddress());
+                    existingShow.setVenueCity(showDetails.getVenueCity());
+                    existingShow.setVenueState(showDetails.getVenueState());
+                    existingShow.setVenueZip(showDetails.getVenueZip());
+                    existingShow.setStartDate(showDetails.getStartDate());
+                    existingShow.setEndDate(showDetails.getEndDate());
+                    existingShow.setRegistrationDeadline(showDetails.getRegistrationDeadline());
+                    existingShow.setOrganizerName(showDetails.getOrganizerName());
+                    existingShow.setContactEmail(showDetails.getContactEmail());
+                    existingShow.setWebsiteUrl(showDetails.getWebsiteUrl());
 
-                    Show updatedExhibition = showRepository.save(existingExhibition);
-                    return ResponseEntity.ok(updatedExhibition);
+                    Show updatedShow = showRepository.save(existingShow);
+                    return ResponseEntity.ok(updatedShow);
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
 
     /**
-     * DELETE /api/v1/secretariat/exhibition/{id}
+     * DELETE /api/v1/secretariat/show/{id}
      * Smaže výstavu
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteExhibition(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteShow(@PathVariable Long id) {
         if (!showRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }

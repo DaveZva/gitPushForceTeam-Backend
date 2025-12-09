@@ -1,6 +1,7 @@
 package com.gpfteam.catshow.catshow_backend.controller;
 
 import com.gpfteam.catshow.catshow_backend.dto.PublicCatalogEntryDto;
+import com.gpfteam.catshow.catshow_backend.dto.QuickCatalogEntryDto;
 import com.gpfteam.catshow.catshow_backend.model.Cat;
 import com.gpfteam.catshow.catshow_backend.model.Registration;
 import com.gpfteam.catshow.catshow_backend.model.RegistrationEntry;
@@ -8,6 +9,8 @@ import com.gpfteam.catshow.catshow_backend.model.Show;
 import com.gpfteam.catshow.catshow_backend.repository.ShowRepository;
 import com.gpfteam.catshow.catshow_backend.repository.RegistrationRepository;
 import java.util.ArrayList;
+
+import com.gpfteam.catshow.catshow_backend.service.CatalogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,22 +19,23 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @RestController
-@RequestMapping("/api/v1/exhibitions")
+@RequestMapping("/api/v1/shows")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class PublicShowController {
 
-    private final ShowRepository exhibitionRepository;
+    private final ShowRepository showRepository;
     private final RegistrationRepository registrationRepository;
+    private final CatalogService catalogService;
 
     /**
-     * GET /api/v1/exhibitions/available
+     * GET /api/v1/shows/available
      * Veřejný endpoint pro registrační formulář
      */
     @GetMapping("/available")
-    public ResponseEntity<List<Show>> getAvailableExhibitions() {
-        List<Show> openExhibitions = exhibitionRepository.findByStatusOrderByStartDateAsc(Show.ShowStatus.OPEN);
-        return ResponseEntity.ok(openExhibitions);
+    public ResponseEntity<List<Show>> getAvailableShows() {
+        List<Show> openShows = showRepository.findByStatusOrderByStartDateAsc(Show.ShowStatus.OPEN);
+        return ResponseEntity.ok(openShows);
     }
 
     @GetMapping("/{showId}/catalog")
@@ -95,6 +99,14 @@ public class PublicShowController {
                 .className(entry.getShowClass() != null ? entry.getShowClass().name() : "")
                 .group(null)
                 .build();
+    }
+
+    @GetMapping("/{showId}/quick-catalog")
+    public ResponseEntity<List<QuickCatalogEntryDto>> getQuickCatalog(@PathVariable Long showId) {
+        if (!showRepository.existsById(showId)) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(catalogService.getQuickCatalog(showId));
     }
 }
 
