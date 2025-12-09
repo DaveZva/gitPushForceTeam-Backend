@@ -2,20 +2,23 @@ package com.gpfteam.catshow.catshow_backend.controller;
 
 import com.gpfteam.catshow.catshow_backend.model.Show;
 import com.gpfteam.catshow.catshow_backend.repository.ShowRepository;
+import com.gpfteam.catshow.catshow_backend.service.CatalogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/secretariat/shows")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class SecretariatController {
-
-    private final ShowRepository exhibitionRepository;
+    private final CatalogService catalogService;
+    private final ShowRepository showRepository;
 
     /**
      * GET /api/v1/secretariat/exhibition
@@ -23,7 +26,7 @@ public class SecretariatController {
      */
     @GetMapping
     public ResponseEntity<List<Show>> getAllExhibitionsForSecretariat() {
-        List<Show> allExhibitions = exhibitionRepository.findAll(
+        List<Show> allExhibitions = showRepository.findAll(
                 Sort.by(Sort.Direction.DESC, "startDate")
         );
         return ResponseEntity.ok(allExhibitions);
@@ -35,7 +38,7 @@ public class SecretariatController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<Show> getExhibitionById(@PathVariable Long id) {
-        return exhibitionRepository.findById(id)
+        return showRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -50,7 +53,7 @@ public class SecretariatController {
         if (exhibition.getStatus() == null) {
             exhibition.setStatus(Show.ShowStatus.PLANNED);
         }
-        Show savedExhibition = exhibitionRepository.save(exhibition);
+        Show savedExhibition = showRepository.save(exhibition);
         return ResponseEntity.status(201).body(savedExhibition);
     }
 
@@ -60,7 +63,7 @@ public class SecretariatController {
      */
     @PutMapping("/{id}")
     public ResponseEntity<Show> updateExhibition(@PathVariable Long id, @RequestBody Show exhibitionDetails) {
-        return exhibitionRepository.findById(id)
+        return showRepository.findById(id)
                 .map(existingExhibition -> {
                     existingExhibition.setName(exhibitionDetails.getName());
                     existingExhibition.setDescription(exhibitionDetails.getDescription());
@@ -77,7 +80,7 @@ public class SecretariatController {
                     existingExhibition.setContactEmail(exhibitionDetails.getContactEmail());
                     existingExhibition.setWebsiteUrl(exhibitionDetails.getWebsiteUrl());
 
-                    Show updatedExhibition = exhibitionRepository.save(existingExhibition);
+                    Show updatedExhibition = showRepository.save(existingExhibition);
                     return ResponseEntity.ok(updatedExhibition);
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -89,10 +92,24 @@ public class SecretariatController {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteExhibition(@PathVariable Long id) {
-        if (!exhibitionRepository.existsById(id)) {
+        if (!showRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
-        exhibitionRepository.deleteById(id);
+        showRepository.deleteById(id);
         return ResponseEntity.noContent().build(); // Status 204
+    }
+
+    @PostMapping("/{id}/generate-catalog")
+    public ResponseEntity<Map<String, Object>> generateCatalog(@PathVariable Long id) {
+        if (!showRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        int count = catalogService.closeShowAndGenerateCatalog(id);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Katalog byl úspěšně vygenerován a výstava uzavřena.");
+        response.put("totalCats", count);
+
+        return ResponseEntity.ok(response);
     }
 }

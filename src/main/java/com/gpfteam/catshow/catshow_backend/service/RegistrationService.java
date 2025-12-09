@@ -29,6 +29,7 @@ public class RegistrationService {
     private final OwnerRepository ownerRepository;
     private final CatRepository catRepository;
     private final UserRepository userRepository;
+    private final RegistrationEntryRepository registrationEntryRepository;
 
     @Transactional
     public RegistrationResponse submitRegistration(RegistrationPayload payload) {
@@ -200,6 +201,12 @@ public class RegistrationService {
         // Neutered
         boolean isNeutered = "YES".equalsIgnoreCase(cData.getNeutered()) || "TRUE".equalsIgnoreCase(cData.getNeutered());
         entry.setNeutered(isNeutered);
+
+        if (reg.getShow().getStatus() == Show.ShowStatus.CLOSED) {
+            Integer maxNum = registrationEntryRepository.findMaxCatalogNumberByShowId(reg.getShow().getId());
+            int nextNum = (maxNum == null) ? 1 : maxNum + 1;
+            entry.setCatalogNumber(nextNum);
+        }
 
         return entry;
     }
