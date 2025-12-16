@@ -67,7 +67,7 @@ public class CatalogService {
         }
 
         registrationEntryRepository.saveAll(entries);
-        log.info("Katalog vygenerován. Očíslováno {} koček.", entries.size());
+        log.info("Katalog vygenerován. Očíslováno {} koček.", entries.size()); //Napsat jinak
 
         return entries.size();
     }
