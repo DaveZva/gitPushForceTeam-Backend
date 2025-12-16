@@ -19,7 +19,7 @@ public class ShowScheduler {
     private final ShowRepository showRepository;
     private final CatalogService catalogService;
 
-    @Scheduled(cron = "0 /15 * * * *")
+    @Scheduled(cron = "0 0 * * * *")
     public void checkShowDeadlines() {
         log.info("Scheduler: Kontrola uzávěrek výstav...");
 

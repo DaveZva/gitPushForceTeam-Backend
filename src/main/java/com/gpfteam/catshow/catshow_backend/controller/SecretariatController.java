@@ -3,11 +3,14 @@ package com.gpfteam.catshow.catshow_backend.controller;
 import com.gpfteam.catshow.catshow_backend.model.Show;
 import com.gpfteam.catshow.catshow_backend.repository.ShowRepository;
 import com.gpfteam.catshow.catshow_backend.service.CatalogService;
+import com.gpfteam.catshow.catshow_backend.dto.CreateShowRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,8 +79,8 @@ public class SecretariatController {
                     existingShow.setEndDate(showDetails.getEndDate());
                     existingShow.setRegistrationDeadline(showDetails.getRegistrationDeadline());
                     existingShow.setOrganizerName(showDetails.getOrganizerName());
-                    existingShow.setContactEmail(showDetails.getContactEmail());
-                    existingShow.setWebsiteUrl(showDetails.getWebsiteUrl());
+                    existingShow.setOrganizerContactEmail(showDetails.getOrganizerContactEmail());
+                    existingShow.setOrganizerWebsiteUrl(showDetails.getOrganizerWebsiteUrl());
 
                     Show updatedShow = showRepository.save(existingShow);
                     return ResponseEntity.ok(updatedShow);
@@ -110,5 +113,51 @@ public class SecretariatController {
         response.put("totalCats", count);
 
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping
+    public ResponseEntity<?> createShow(@Valid @RequestBody CreateShowRequest request) {
+
+        // 1. Validace časů (Business Logika)
+        if (request.getEndDate().isBefore(request.getStartDate())) {
+            return ResponseEntity.badRequest().body("Datum konce musí být později než datum začátku.");
+        }
+
+        if (request.getRegistrationDeadline().isAfter(request.getStartDate())) {
+            return ResponseEntity.badRequest().body("Uzávěrka registrací musí být před začátkem výstavy.");
+        }
+
+        // 2. Mapování DTO -> Entity
+        Show show = Show.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .status(Show.ShowStatus.PLANNED) // Výchozí stav
+                // Termíny
+                .startDate(request.getStartDate())
+                .endDate(request.getEndDate())
+                .registrationDeadline(request.getRegistrationDeadline())
+                // Místo
+                .venueName(request.getVenueName())
+                .venueAddress(request.getVenueAddress())
+                .venueCity(request.getVenueCity())
+                .venueState(request.getVenueState())
+                .venueZip(request.getVenueZip())
+                // Organizátor
+                .organizerName(request.getOrganizerName())
+                .organizerContactEmail(request.getOrganizerContactEmail())
+                .organizerWebsiteUrl(request.getOrganizerWebsiteUrl())
+                // Kapacita
+                .maxCats(request.getMaxCats())
+                // Harmonogram
+                .vetCheckStart(request.getVetCheckStart())
+                .judgingStart(request.getJudgingStart())
+                .judgingEnd(request.getJudgingEnd())
+                .build();
+
+        Show savedShow = showRepository.save(show);
+
+        return ResponseEntity
+                .created(URI.create("/api/v1/secretariat/shows/" + savedShow.getId()))
+                .body(savedShow);
     }
 }

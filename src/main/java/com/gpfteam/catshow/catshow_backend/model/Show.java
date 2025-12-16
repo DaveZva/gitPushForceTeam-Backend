@@ -1,10 +1,7 @@
 package com.gpfteam.catshow.catshow_backend.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -46,8 +43,15 @@ public class Show {
 
     @Column(nullable = false)
     private String organizerName;
-    private String contactEmail;
-    private String websiteUrl;
+    private String organizerContactEmail;
+    private String organizerWebsiteUrl;
+
+    @Column(nullable = false)
+    private Integer maxCats;
+
+    private LocalDateTime vetCheckStart;
+    private LocalDateTime judgingStart;
+    private LocalDateTime judgingEnd;
 
     public enum ShowStatus {
         PLANNED,  // Připravuje se
