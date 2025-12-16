@@ -41,7 +41,8 @@ public class CreateShowRequest {
     private String organizerWebsiteUrl;
 
     @NotNull(message = "Maximální počet koček je povinný")
-    @Min(value = 1, message = "Kapacita musí být alespoň 1")
+    @Min(value = 10, message = "Kapacita musí být alespoň 10")
+    @Max(value = 2000, message = "Maximální kapacita je 2000")
     private Integer maxCats;
 
     private LocalDateTime vetCheckStart;

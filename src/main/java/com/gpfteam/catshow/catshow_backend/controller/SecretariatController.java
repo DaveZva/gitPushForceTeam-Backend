@@ -46,20 +46,6 @@ public class SecretariatController {
     }
 
     /**
-     * POST /api/v1/secretariat/show
-     * Vytvoří novou výstavu
-     */
-    @PostMapping
-    public ResponseEntity<Show> createShow(@RequestBody Show show) {
-        show.setId(null);
-        if (show.getStatus() == null) {
-            show.setStatus(Show.ShowStatus.PLANNED);
-        }
-        Show savedShow = showRepository.save(show);
-        return ResponseEntity.status(201).body(savedShow);
-    }
-
-    /**
      * PUT /api/v1/secretariat/show/{id}
      * Aktualizuje existující výstavu
      */
@@ -95,7 +81,8 @@ public class SecretariatController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteShow(@PathVariable Long id) {
         if (!showRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity
+                    .notFound().build();
         }
         showRepository.deleteById(id);
         return ResponseEntity.noContent().build(); // Status 204
@@ -118,7 +105,6 @@ public class SecretariatController {
     @PostMapping
     public ResponseEntity<?> createShow(@Valid @RequestBody CreateShowRequest request) {
 
-        // 1. Validace časů (Business Logika)
         if (request.getEndDate().isBefore(request.getStartDate())) {
             return ResponseEntity.badRequest().body("Datum konce musí být později než datum začátku.");
         }
