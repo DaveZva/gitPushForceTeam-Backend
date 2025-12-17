@@ -1,11 +1,13 @@
 package com.gpfteam.catshow.catshow_backend.controller;
 
 import com.gpfteam.catshow.catshow_backend.dto.PublicCatalogEntryDto;
+import com.gpfteam.catshow.catshow_backend.dto.PublicShowDetailDto;
 import com.gpfteam.catshow.catshow_backend.dto.QuickCatalogEntryDto;
 import com.gpfteam.catshow.catshow_backend.model.Cat;
 import com.gpfteam.catshow.catshow_backend.model.Registration;
 import com.gpfteam.catshow.catshow_backend.model.RegistrationEntry;
 import com.gpfteam.catshow.catshow_backend.model.Show;
+import com.gpfteam.catshow.catshow_backend.repository.RegistrationEntryRepository;
 import com.gpfteam.catshow.catshow_backend.repository.ShowRepository;
 import com.gpfteam.catshow.catshow_backend.repository.RegistrationRepository;
 import java.util.ArrayList;
@@ -15,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -27,6 +30,7 @@ public class PublicShowController {
     private final ShowRepository showRepository;
     private final RegistrationRepository registrationRepository;
     private final CatalogService catalogService;
+    private final RegistrationEntryRepository registrationEntryRepository;
 
     /**
      * GET /api/v1/shows/available
@@ -107,6 +111,42 @@ public class PublicShowController {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(catalogService.getQuickCatalog(showId));
+    }
+
+    @GetMapping("/{id}/details")
+    public ResponseEntity<PublicShowDetailDto> getShowDetails(@PathVariable Long id) {
+        Show show = showRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Výstava nenalezena")); // Nebo 404
+
+        Long currentCount = registrationEntryRepository.countEntriesByShowIdAndStatus(
+                id,
+                Arrays.asList(
+                        Registration.RegistrationStatus.PLANNED,
+                        Registration.RegistrationStatus.CONFIRMED
+                )
+        );
+
+        PublicShowDetailDto dto = PublicShowDetailDto.builder()
+                .id(show.getId())
+                .name(show.getName())
+                .description(show.getDescription())
+
+                .venueName(show.getVenueName())
+                .venueCity(show.getVenueCity())
+                .organizerName(show.getOrganizerName())
+                .organizerWebsiteUrl(show.getOrganizerWebsiteUrl())
+
+                .startDate(show.getStartDate())
+                .endDate(show.getEndDate())
+                .vetCheckStart(show.getVetCheckStart())
+                .judgingStart(show.getJudgingStart())
+                .judgingEnd(show.getJudgingEnd())
+
+                .maxCats(show.getMaxCats())
+                .occupiedSpots(currentCount)
+                .build();
+
+        return ResponseEntity.ok(dto);
     }
 }
 
