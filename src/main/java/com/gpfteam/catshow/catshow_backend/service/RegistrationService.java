@@ -132,11 +132,12 @@ public class RegistrationService {
      * Pokud nenajde, vytvoří novou.
      */
     private Cat findOrCreateCat(CatPayload cData, User user) {
+        Cat cat;
+
         if (user != null) {
             Cat probe = new Cat();
             probe.setOwnerUser(user);
 
-            // Prioritně hledáme podle čipu
             if (cData.getChipNumber() != null && !cData.getChipNumber().isEmpty()) {
                 probe.setChipNumber(cData.getChipNumber());
             } else {
@@ -144,44 +145,19 @@ public class RegistrationService {
             }
 
             Optional<Cat> existing = catRepository.findOne(Example.of(probe));
+
             if (existing.isPresent()) {
-                return existing.get();
+                cat = existing.get();
+                updateCatFields(cat, cData);
+                return catRepository.save(cat);
             }
         }
 
-        Cat.Gender genderEnum = Cat.Gender.valueOf(cData.getGender().toUpperCase());
+        cat = new Cat();
+        cat.setOwnerUser(user);
+        updateCatFields(cat, cData);
 
-        Cat newCat = Cat.builder()
-                .ownerUser(user)
-                // Kočka
-                .catName(cData.getCatName())
-                .titleBefore(cData.getTitleBefore())
-                .titleAfter(cData.getTitleAfter())
-                .chipNumber(cData.getChipNumber())
-                .gender(genderEnum)
-                .emsCode(cData.getEmsCode())
-                .birthDate(cData.getBirthDate())
-                .pedigreeNumber(cData.getPedigreeNumber())
-
-                .fatherTitleBefore(cData.getFatherTitleBefore())
-                .fatherName(cData.getFatherName())
-                .fatherTitleAfter(cData.getFatherTitleAfter())
-                .fatherEmsCode(cData.getFatherEmsCode())
-                .fatherBirthDate(cData.getFatherBirthDate())
-                .fatherChipNumber(cData.getFatherChipNumber())
-                .fatherPedigreeNumber(cData.getFatherPedigreeNumber())
-
-                .motherTitleBefore(cData.getMotherTitleBefore())
-                .motherName(cData.getMotherName())
-                .motherTitleAfter(cData.getMotherTitleAfter())
-                .motherEmsCode(cData.getMotherEmsCode())
-                .motherBirthDate(cData.getMotherBirthDate())
-                .motherChipNumber(cData.getMotherChipNumber())
-                .motherPedigreeNumber(cData.getMotherPedigreeNumber())
-
-                .build();
-
-        return catRepository.save(newCat);
+        return catRepository.save(cat);
     }
 
     private RegistrationEntry mapToEntry(CatPayload cData, Registration reg, Cat cat) {
@@ -229,5 +205,41 @@ public class RegistrationService {
                 .paidAt(registration.getPaidAt())
                 .showName(registration.getShow().getName())
                 .build();
+    }
+
+    private void updateCatFields(Cat cat, CatPayload cData) {
+        cat.setCatName(cData.getCatName());
+        cat.setTitleBefore(cData.getTitleBefore());
+        cat.setTitleAfter(cData.getTitleAfter());
+        cat.setChipNumber(cData.getChipNumber());
+        cat.setEmsCode(cData.getEmsCode());
+        cat.setBirthDate(cData.getBirthDate());
+        cat.setPedigreeNumber(cData.getPedigreeNumber());
+
+        // Uložení skupiny (nezapomeňte přidat toto pole do entity Cat a CatPayload)
+        cat.setCatGroup(cData.getGroup());
+
+        // Bezpečný převod pohlaví
+        if (cData.getGender() != null) {
+            cat.setGender(Cat.Gender.valueOf(cData.getGender().toUpperCase()));
+        }
+
+        // Rodiče - Otec
+        cat.setFatherTitleBefore(cData.getFatherTitleBefore());
+        cat.setFatherName(cData.getFatherName());
+        cat.setFatherTitleAfter(cData.getFatherTitleAfter());
+        cat.setFatherEmsCode(cData.getFatherEmsCode());
+        cat.setFatherBirthDate(cData.getFatherBirthDate());
+        cat.setFatherChipNumber(cData.getFatherChipNumber());
+        cat.setFatherPedigreeNumber(cData.getFatherPedigreeNumber());
+
+        // Rodiče - Matka
+        cat.setMotherTitleBefore(cData.getMotherTitleBefore());
+        cat.setMotherName(cData.getMotherName());
+        cat.setMotherTitleAfter(cData.getMotherTitleAfter());
+        cat.setMotherEmsCode(cData.getMotherEmsCode());
+        cat.setMotherBirthDate(cData.getMotherBirthDate());
+        cat.setMotherChipNumber(cData.getMotherChipNumber());
+        cat.setMotherPedigreeNumber(cData.getMotherPedigreeNumber());
     }
 }

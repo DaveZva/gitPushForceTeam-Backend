@@ -12,6 +12,7 @@ public class CatPayload {
     private String neutered;
     private String emsCode;
     private String birthDate;
+    private String group;
     private String showClass;
     private String pedigreeNumber;
     private String cageType;

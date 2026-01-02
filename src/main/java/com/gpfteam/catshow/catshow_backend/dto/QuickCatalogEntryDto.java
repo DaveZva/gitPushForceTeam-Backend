@@ -11,5 +11,6 @@ public class QuickCatalogEntryDto {
     private String gender;
     private String emsCode;
     private String showClass;
+    private String group;
     private int category;
 }

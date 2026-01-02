@@ -101,7 +101,7 @@ public class PublicShowController {
                 .category(category)
                 .color(emsCode)
                 .className(entry.getShowClass() != null ? entry.getShowClass().name() : "")
-                .group(null)
+                .group(cat.getCatGroup())
                 .build();
     }
 
