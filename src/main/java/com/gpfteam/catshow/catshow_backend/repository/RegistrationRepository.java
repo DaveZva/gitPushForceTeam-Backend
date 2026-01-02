@@ -17,4 +17,8 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
             "WHERE r.show.id = :showId AND r.status = 'CONFIRMED'")
     List<Registration> findConfirmedRegistrationsWithCatsByShowId(@Param("showId") Long showId);
     List<Registration> findByShowAndStatus(Show show, Registration.RegistrationStatus status);
+    long countByStatus(Registration.RegistrationStatus status);
+    List<Registration> findByShow(Show show);
+    long countByShowId(Long showId);
+    long countByShowIdAndStatus(Long showId, Registration.RegistrationStatus status);
 }

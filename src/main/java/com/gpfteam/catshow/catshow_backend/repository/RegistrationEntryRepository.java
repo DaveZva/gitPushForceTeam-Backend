@@ -16,4 +16,10 @@ public interface RegistrationEntryRepository extends JpaRepository<RegistrationE
             "WHERE e.registration.show.id = :showId " +
             "AND e.registration.status IN :statuses")
     Long countEntriesByShowIdAndStatus(Long showId, List<Registration.RegistrationStatus> statuses);
+
+    @Query("SELECT COUNT(e) FROM RegistrationEntry e WHERE e.registration.status = :status")
+    long countByRegistrationStatus(@Param("status") Registration.RegistrationStatus status);
+
+    @Query("SELECT COUNT(e) FROM RegistrationEntry e WHERE e.registration.show.id = :showId AND e.registration.status = :status")
+    long countByShowIdAndRegistrationStatus(@Param("showId") Long showId, @Param("status") Registration.RegistrationStatus status);
 }

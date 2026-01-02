@@ -1,0 +1,21 @@
+package com.gpfteam.catshow.catshow_backend.dto;
+
+import lombok.Builder;
+import lombok.Data;
+
+@Data
+@Builder
+public class SecretariatEntryDetailDto {
+    private Long entryId;
+    private Long catId;
+
+    private String catName;
+    private String emsCode;
+    private String gender;
+    private String birthDate;
+    private String pedigreeNumber;
+    private String chipNumber;
+
+    private String showClass;
+    private String catalogNumber;
+}

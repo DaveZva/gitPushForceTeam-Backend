@@ -1,9 +1,14 @@
 package com.gpfteam.catshow.catshow_backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Data
 @Builder
@@ -60,4 +65,18 @@ public class Show {
         COMPLETED, // Proběhlo
         CANCELLED  // Zrušeno
     }
+
+    @ManyToMany
+    @JoinTable(
+            name = "show_judges",
+            joinColumns = @JoinColumn(name = "show_id"),
+            inverseJoinColumns = @JoinColumn(name = "judge_id")
+    )
+    @JsonIgnore
+    private Set<Judge> judges = new HashSet<>();
+
+    @OneToMany(mappedBy = "show", fetch = FetchType.LAZY)
+    @JsonIgnore
+    @ToString.Exclude
+    private List<Registration> registrations;
 }
