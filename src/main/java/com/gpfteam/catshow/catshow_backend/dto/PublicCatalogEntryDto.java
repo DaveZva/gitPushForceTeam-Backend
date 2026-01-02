@@ -23,5 +23,5 @@ public class PublicCatalogEntryDto {
     private String category;
     private String color;
     private String className;
-    private Integer group;
+    private String group;
 }

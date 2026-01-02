@@ -25,6 +25,7 @@ public class Cat {
     private String birthDate;
     private String pedigreeNumber;
     private String chipNumber;
+    private String catGroup;
 
     @Enumerated(EnumType.STRING)
     private Gender gender;

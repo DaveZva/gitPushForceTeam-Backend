@@ -9,6 +9,7 @@ import com.gpfteam.catshow.catshow_backend.repository.RegistrationRepository;
 import com.gpfteam.catshow.catshow_backend.repository.ShowRepository;
 import com.gpfteam.catshow.catshow_backend.util.EmsUtility;
 import com.gpfteam.catshow.catshow_backend.dto.QuickCatalogEntryDto;
+import com.gpfteam.catshow.catshow_backend.dto.PublicCatalogEntryDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -54,8 +55,9 @@ public class CatalogService {
         // 4. Seřadit podle klíče: Kategorie -> Plemeno -> Třída -> Pohlaví -> Jméno
         entries.sort(Comparator
                 .comparingInt((RegistrationEntry e) -> EmsUtility.getCategory(e.getCat().getEmsCode()))
-                .thenComparing(e -> e.getCat().getEmsCode())
-                .thenComparingInt(e -> getClassRank(e.getShowClass())) // Vlastní řazení tříd
+                .thenComparing((RegistrationEntry e) -> e.getCat().getEmsCode().split(" ")[0]) // Pouze plemeno (např. MCO)
+                .thenComparing((RegistrationEntry e) -> e.getCat().getCatGroup(), Comparator.nullsFirst(Comparator.naturalOrder())) // Skupina (1, 2, 3...)
+                .thenComparingInt(e -> getClassRank(e.getShowClass()))
                 .thenComparing(e -> e.getCat().getGender())
                 .thenComparing(e -> e.getCat().getCatName())
         );
@@ -67,8 +69,7 @@ public class CatalogService {
         }
 
         registrationEntryRepository.saveAll(entries);
-        log.info("Katalog vygenerován. Očíslováno {} koček.", entries.size()); //Napsat jinak
-
+        log.info("Generování katalogu pro výstavu '{}' dokončeno. Celkem očíslováno {} koček.", show.getName(), entries.size());
         return entries.size();
     }
 
@@ -124,7 +125,9 @@ public class CatalogService {
                 .collect(Collectors.toList());
 
         entries.sort(Comparator
-                .comparing((RegistrationEntry e) -> e.getCat().getEmsCode())
+                .comparingInt((RegistrationEntry e) -> EmsUtility.getCategory(e.getCat().getEmsCode()))
+                .thenComparing((RegistrationEntry e) -> e.getCat().getEmsCode().split(" ")[0])
+                .thenComparing((RegistrationEntry e) -> e.getCat().getCatGroup(), Comparator.nullsFirst(Comparator.naturalOrder()))
                 .thenComparingInt(e -> getClassRank(e.getShowClass()))
                 .thenComparing(e -> e.getCat().getCatName())
         );
@@ -141,9 +144,66 @@ public class CatalogService {
                     .catName(fullName.trim())
                     .gender(c.getGender().name())
                     .emsCode(c.getEmsCode())
+                    .group(c.getCatGroup())
                     .showClass(e.getShowClass() != null ? e.getShowClass().name() : "")
                     .category(EmsUtility.getCategory(c.getEmsCode()))
                     .build();
         }).collect(Collectors.toList());
+    }
+
+    public List<PublicCatalogEntryDto> getCatalog(Long showId) {
+        Show show = showRepository.findById(showId)
+                .orElseThrow(() -> new IllegalArgumentException("Show not found"));
+
+        // Načtení pouze potvrzených registrací
+        List<Registration> confirmedRegistrations = registrationRepository.findByShowAndStatus(
+                show, Registration.RegistrationStatus.CONFIRMED
+        );
+
+        // Převedení na jednotlivé záznamy koček, které mají přidělené číslo v katalogu
+        List<RegistrationEntry> entries = confirmedRegistrations.stream()
+                .flatMap(reg -> reg.getEntries().stream())
+                .filter(e -> e.getCatalogNumber() != null)
+                .collect(Collectors.toList());
+
+        // Seřazení: Kategorie -> Plemeno -> Skupina -> Třída -> Pohlaví -> Jméno
+        entries.sort(Comparator
+                .comparingInt((RegistrationEntry e) -> EmsUtility.getCategory(e.getCat().getEmsCode()))
+                .thenComparing((RegistrationEntry e) -> e.getCat().getEmsCode().split(" ")[0])
+                .thenComparing((RegistrationEntry e) -> e.getCat().getCatGroup(), Comparator.nullsFirst(Comparator.naturalOrder()))
+                .thenComparingInt(e -> getClassRank(e.getShowClass()))
+                .thenComparing(e -> e.getCat().getGender())
+                .thenComparing(e -> e.getCat().getCatName())
+        );
+
+        return entries.stream().map(this::mapToPublicDto).collect(Collectors.toList());
+    }
+
+    private PublicCatalogEntryDto mapToPublicDto(RegistrationEntry entry) {
+        Cat c = entry.getCat();
+        Registration reg = entry.getRegistration();
+
+        String fullName = (c.getTitleBefore() != null ? c.getTitleBefore() + " " : "")
+                + c.getCatName()
+                + (c.getTitleAfter() != null ? " " + c.getTitleAfter() : "");
+
+        return PublicCatalogEntryDto.builder()
+                .id(entry.getId())
+                .entryNumber(entry.getCatalogNumber())
+                .name(fullName.trim())
+                .ems(c.getEmsCode())
+                .sex(c.getGender() == Cat.Gender.MALE ? "1,0" : "0,1")
+                .birthDate(c.getBirthDate())
+                .registrationNumber(c.getPedigreeNumber())
+                .father(c.getFatherName())
+                .mother(c.getMotherName())
+                .ownerName(reg.getOwner().getFirstName() + " " + reg.getOwner().getLastName())
+                .breederName(reg.getBreeder().getFirstName() + " " + reg.getBreeder().getLastName())
+                .breederCountry(reg.getBreeder().getCity())
+                .category(c.getEmsCode().split(" ")[0])
+                .color(c.getEmsCode())
+                .className(entry.getShowClass().name())
+                .group(c.getCatGroup())
+                .build();
     }
 }
