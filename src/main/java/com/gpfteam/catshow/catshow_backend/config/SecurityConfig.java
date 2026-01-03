@@ -33,16 +33,18 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authz -> authz
 
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
                         .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/exhibitions/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/shows/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/public/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/registrations").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/my-registrations").authenticated()
+
                         .requestMatchers(HttpMethod.POST, "/api/v1/payments/webhook").permitAll()
-                        .requestMatchers("/api/v1/secretariat/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/registrations").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/my-registrations").authenticated()
                         .requestMatchers("/api/v1/payments/**").authenticated()
                         .requestMatchers("/api/v1/payment-intents/**").authenticated()
+
+                        .requestMatchers("/api/v1/secretariat/**").hasAnyAuthority("SECRETARIAT", "ADMIN")
 
                         .anyRequest().authenticated()
                 )

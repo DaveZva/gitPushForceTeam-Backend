@@ -43,7 +43,7 @@ public class SecretariatController {
                 .endDate(s.getEndDate().toLocalDate())
                 .registrationDeadline(s.getRegistrationDeadline().toLocalDate())
                 .maxCats(s.getMaxCats())
-                .totalRegistrations(s.getRegistrations() != null ? s.getRegistrations().size() : 0) // Bezpečný výpočet
+                .totalRegistrations(s.getRegistrations() != null ? s.getRegistrations().size() : 0)
                 .build()).toList();
 
         return ResponseEntity.ok(dtos);
