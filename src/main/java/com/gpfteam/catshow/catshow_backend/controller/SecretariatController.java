@@ -4,6 +4,7 @@ import com.gpfteam.catshow.catshow_backend.dto.*;
 import com.gpfteam.catshow.catshow_backend.model.*;
 import com.gpfteam.catshow.catshow_backend.repository.*;
 import com.gpfteam.catshow.catshow_backend.service.CatalogService;
+import com.gpfteam.catshow.catshow_backend.service.PaymentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.net.URI;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,6 +30,7 @@ public class SecretariatController {
     private final UserRepository userRepository;
     private final JudgeRepository judgeRepository;
     private final RegistrationEntryRepository registrationEntryRepository;
+    private final PaymentService paymentService;
 
     @GetMapping
     public ResponseEntity<List<SecretariatShowDetailDto>> getAllShowsForSecretariat() {
@@ -147,24 +150,68 @@ public class SecretariatController {
     }
 
     @GetMapping("/judges")
-    public ResponseEntity<List<Judge>> getAllJudges() {
-        return ResponseEntity.ok(judgeRepository.findAll());
+    public ResponseEntity<List<SecretariatJudgeDto>> getAllJudges() {
+        return ResponseEntity.ok(judgeRepository.findAll().stream()
+                .map(this::mapToJudgeDto)
+                .toList());
+    }
+
+    @PostMapping("/judges")
+    public ResponseEntity<SecretariatJudgeDto> createJudge(@RequestBody SecretariatJudgeDto dto) {
+        if (judgeRepository.existsByEmail(dto.getEmail())) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        com.gpfteam.catshow.catshow_backend.model.Judge judge = com.gpfteam.catshow.catshow_backend.model.Judge.builder()
+                .firstName(dto.getFirstName())
+                .lastName(dto.getLastName())
+                .email(dto.getEmail())
+                .country(dto.getCountry())
+                .validGroups(dto.getValidGroups())
+                .build();
+
+        judge = judgeRepository.save(judge);
+        return ResponseEntity.ok(mapToJudgeDto(judge));
+    }
+
+    @GetMapping("/{showId}/judges")
+    public ResponseEntity<List<SecretariatJudgeDto>> getShowJudges(@PathVariable Long showId) {
+        Show show = showRepository.findById(showId).orElseThrow();
+        return ResponseEntity.ok(show.getJudges().stream()
+                .map(this::mapToJudgeDto)
+                .toList());
     }
 
     @PostMapping("/{showId}/judges")
     public ResponseEntity<Void> assignJudgeToShow(@PathVariable Long showId, @RequestBody Map<String, Long> payload) {
         Show show = showRepository.findById(showId).orElseThrow();
-        show.getJudges().add(judgeRepository.findById(payload.get("judgeId")).orElseThrow());
-        showRepository.save(show);
+        com.gpfteam.catshow.catshow_backend.model.Judge judge = judgeRepository.findById(payload.get("judgeId"))
+                .orElseThrow();
+
+        if (!show.getJudges().contains(judge)) {
+            show.getJudges().add(judge);
+            showRepository.save(show);
+        }
         return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/{showId}/judges/{judgeId}")
     public ResponseEntity<Void> removeJudgeFromShow(@PathVariable Long showId, @PathVariable Long judgeId) {
         Show show = showRepository.findById(showId).orElseThrow();
-        show.getJudges().remove(judgeRepository.findById(judgeId).orElseThrow());
+        show.getJudges().removeIf(j -> j.getId().equals(judgeId));
         showRepository.save(show);
         return ResponseEntity.ok().build();
+    }
+
+    private SecretariatJudgeDto mapToJudgeDto(com.gpfteam.catshow.catshow_backend.model.Judge judge) {
+        return SecretariatJudgeDto.builder()
+                .id(judge.getId())
+                .firstName(judge.getFirstName())
+                .lastName(judge.getLastName())
+                .email(judge.getEmail())
+                .country(judge.getCountry())
+                .validGroups(judge.getValidGroups())
+                .build();
     }
 
     @PostMapping
@@ -199,5 +246,54 @@ public class SecretariatController {
         response.put("message", "Katalog vygenerován");
         response.put("totalCats", count);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{showId}/payments")
+    public ResponseEntity<List<SecretariatPaymentDto>> getShowPayments(@PathVariable Long showId) {
+        Show show = showRepository.findById(showId)
+                .orElseThrow(() -> new RuntimeException("Výstava nenalezena"));
+
+        List<Registration> registrations = registrationRepository.findByShow(show);
+
+        List<SecretariatPaymentDto> dtos = registrations.stream().map(reg -> {
+            long price = reg.getAmountPaid() != null ? reg.getAmountPaid() : paymentService.calculatePrice(reg);
+
+            String method = "PENDING";
+            if (reg.getStatus() == Registration.RegistrationStatus.CONFIRMED) {
+                method = reg.getStripePaymentIntentId() != null ? "STRIPE" : "MANUAL";
+            }
+
+            return SecretariatPaymentDto.builder()
+                    .registrationId(reg.getId())
+                    .registrationNumber(reg.getRegistrationNumber())
+                    .ownerName(reg.getOwner().getFirstName() + " " + reg.getOwner().getLastName())
+                    .ownerEmail(reg.getOwner().getEmail())
+                    .amount(price)
+                    .status(reg.getStatus().name())
+                    .paymentMethod(method)
+                    .paidAt(reg.getPaidAt())
+                    .createdAt(reg.getCreatedAt())
+                    .catCount(reg.getEntries() != null ? reg.getEntries().size() : 0)
+                    .build();
+        }).toList();
+
+        return ResponseEntity.ok(dtos);
+    }
+
+    @PostMapping("/payments/{registrationId}/confirm")
+    public ResponseEntity<Void> confirmPaymentManually(@PathVariable Long registrationId) {
+        Registration registration = registrationRepository.findById(registrationId)
+                .orElseThrow(() -> new RuntimeException("Registrace nenalezena"));
+
+        if (registration.getStatus() != Registration.RegistrationStatus.CONFIRMED) {
+            long price = paymentService.calculatePrice(registration);
+            registration.setStatus(Registration.RegistrationStatus.CONFIRMED);
+            registration.setAmountPaid(price);
+            registration.setPaidAt(LocalDateTime.now());
+            registration.setStripePaymentIntentId(null);
+            registrationRepository.save(registration);
+        }
+
+        return ResponseEntity.ok().build();
     }
 }

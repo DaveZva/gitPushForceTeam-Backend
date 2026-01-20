@@ -62,7 +62,7 @@ public class PaymentService {
     }
 
     // TODO: Implementovat reálnou logiku ceníku podle zadání (klecné + startovné)
-    private long calculatePrice(Registration registration) {
+    public long calculatePrice(Registration registration) {
         long basePrice = 50000; // 500 CZK základ
         long catPrice = 30000;  // 300 CZK za kočku
 

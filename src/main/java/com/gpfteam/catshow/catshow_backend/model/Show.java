@@ -5,10 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @Data
 @Builder
@@ -72,8 +69,8 @@ public class Show {
             joinColumns = @JoinColumn(name = "show_id"),
             inverseJoinColumns = @JoinColumn(name = "judge_id")
     )
-    @JsonIgnore
-    private Set<Judge> judges = new HashSet<>();
+    @Builder.Default
+    private List<Judge> judges = new ArrayList<>();
 
     @OneToMany(mappedBy = "show", fetch = FetchType.LAZY)
     @JsonIgnore

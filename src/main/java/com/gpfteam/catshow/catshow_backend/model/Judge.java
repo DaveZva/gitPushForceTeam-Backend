@@ -3,11 +3,14 @@ package com.gpfteam.catshow.catshow_backend.model;
 import jakarta.persistence.*;
 import lombok.*;
 
-@Entity
+import java.util.ArrayList;
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Entity
 @Table(name = "judges")
 public class Judge {
 
@@ -15,8 +18,20 @@ public class Judge {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String name;
+    @Column(nullable = false)
+    private String firstName;
+
+    @Column(nullable = false)
+    private String lastName;
+
+    @Column(nullable = false, unique = true)
+    private String email;
+
     private String country;
 
-    private String categories;
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "judge_valid_groups", joinColumns = @JoinColumn(name = "judge_id"))
+    @Column(name = "group_code")
+    @Builder.Default
+    private List<String> validGroups = new ArrayList<>();
 }
