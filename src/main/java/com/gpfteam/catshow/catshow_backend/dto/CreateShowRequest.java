@@ -36,9 +36,9 @@ public class CreateShowRequest {
     private String organizerName;
 
     @Email(message = "Neplatný formát emailu")
-    private String organizerContactEmail;
+    private String contactEmail;
 
-    private String organizerWebsiteUrl;
+    private String websiteUrl;
 
     @NotNull(message = "Maximální počet koček je povinný")
     @Min(value = 10, message = "Kapacita musí být alespoň 10")
@@ -48,4 +48,6 @@ public class CreateShowRequest {
     private LocalDateTime vetCheckStart;
     private LocalDateTime judgingStart;
     private LocalDateTime judgingEnd;
+
+    private String status;
 }

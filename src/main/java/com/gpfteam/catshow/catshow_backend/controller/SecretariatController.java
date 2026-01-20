@@ -42,9 +42,9 @@ public class SecretariatController {
                 .status(s.getStatus().name())
                 .venueCity(s.getVenueCity())
                 .venueName(s.getVenueName())
-                .startDate(s.getStartDate().toLocalDate())
-                .endDate(s.getEndDate().toLocalDate())
-                .registrationDeadline(s.getRegistrationDeadline().toLocalDate())
+                .startDate(s.getStartDate())
+                .endDate(s.getEndDate())
+                .registrationDeadline(s.getRegistrationDeadline())
                 .maxCats(s.getMaxCats())
                 .totalRegistrations(s.getRegistrations() != null ? s.getRegistrations().size() : 0)
                 .build()).toList();
@@ -80,11 +80,26 @@ public class SecretariatController {
         return ResponseEntity.ok(SecretariatShowDetailDto.builder()
                 .id(show.getId())
                 .name(show.getName())
+                .description(show.getDescription())
                 .status(show.getStatus().name())
+
+                .venueName(show.getVenueName())
                 .venueCity(show.getVenueCity())
-                .startDate(show.getStartDate().toLocalDate())
-                .endDate(show.getEndDate().toLocalDate())
-                .registrationDeadline(show.getRegistrationDeadline().toLocalDate())
+                .venueAddress(show.getVenueAddress())
+                .venueState(show.getVenueState())
+                .venueZip(show.getVenueZip())
+
+                .organizerName(show.getOrganizerName())
+                .organizerContactEmail(show.getOrganizerContactEmail())
+                .organizerWebsiteUrl(show.getOrganizerWebsiteUrl())
+
+                .startDate(show.getStartDate())
+                .endDate(show.getEndDate())
+                .registrationDeadline(show.getRegistrationDeadline())
+                .vetCheckStart(show.getVetCheckStart())
+                .judgingStart(show.getJudgingStart())
+                .judgingEnd(show.getJudgingEnd())
+
                 .totalRegistrations(registrations.size())
                 .totalCats(totalCats)
                 .confirmedRegistrations(confirmedRegs)
@@ -216,19 +231,61 @@ public class SecretariatController {
 
     @PostMapping
     public ResponseEntity<Show> createShow(@Valid @RequestBody CreateShowRequest request) {
-        Show show = Show.builder().name(request.getName()).status(Show.ShowStatus.PLANNED)
-                .startDate(request.getStartDate()).endDate(request.getEndDate())
+        Show show = Show.builder()
+                .name(request.getName())
+                .description(request.getDescription()) // Bylo vynecháno
+                .status(Show.ShowStatus.PLANNED)
+                .startDate(request.getStartDate())
+                .endDate(request.getEndDate())
                 .registrationDeadline(request.getRegistrationDeadline())
-                .venueName(request.getVenueName()).venueCity(request.getVenueCity())
-                .organizerName(request.getOrganizerName()).maxCats(request.getMaxCats()).build();
+                .venueName(request.getVenueName())
+                .venueAddress(request.getVenueAddress())
+                .venueCity(request.getVenueCity())
+                .venueState(request.getVenueState())
+                .venueZip(request.getVenueZip())
+                .organizerName(request.getOrganizerName())
+                .organizerContactEmail(request.getContactEmail())
+                .organizerWebsiteUrl(request.getWebsiteUrl())
+                .maxCats(request.getMaxCats())
+                .vetCheckStart(request.getVetCheckStart())
+                .judgingStart(request.getJudgingStart())
+                .judgingEnd(request.getJudgingEnd())
+                .build();
+
         return ResponseEntity.created(URI.create("/api/v1/secretariat/shows/" + showRepository.save(show).getId())).body(show);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Show> updateShow(@PathVariable Long id, @RequestBody Show showDetails) {
+    public ResponseEntity<Show> updateShow(@PathVariable Long id, @Valid @RequestBody CreateShowRequest request) {
         return showRepository.findById(id).map(existingShow -> {
-            existingShow.setName(showDetails.getName());
-            existingShow.setStatus(showDetails.getStatus());
+            existingShow.setName(request.getName());
+            existingShow.setDescription(request.getDescription());
+            existingShow.setStartDate(request.getStartDate());
+            existingShow.setEndDate(request.getEndDate());
+            existingShow.setRegistrationDeadline(request.getRegistrationDeadline());
+            existingShow.setMaxCats(request.getMaxCats());
+
+            existingShow.setVenueName(request.getVenueName());
+            existingShow.setVenueAddress(request.getVenueAddress());
+            existingShow.setVenueCity(request.getVenueCity());
+            existingShow.setVenueState(request.getVenueState());
+            existingShow.setVenueZip(request.getVenueZip());
+
+            existingShow.setOrganizerName(request.getOrganizerName());
+            existingShow.setOrganizerContactEmail(request.getContactEmail());
+            existingShow.setOrganizerWebsiteUrl(request.getWebsiteUrl());
+
+            existingShow.setVetCheckStart(request.getVetCheckStart());
+            existingShow.setJudgingStart(request.getJudgingStart());
+            existingShow.setJudgingEnd(request.getJudgingEnd());
+
+            if (request.getStatus() != null) {
+                try {
+                    existingShow.setStatus(Show.ShowStatus.valueOf(request.getStatus()));
+                } catch (IllegalArgumentException e) {
+                }
+            }
+
             return ResponseEntity.ok(showRepository.save(existingShow));
         }).orElse(ResponseEntity.notFound().build());
     }
