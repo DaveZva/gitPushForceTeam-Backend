@@ -10,5 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RegistrationResponse {
+    private Long registrationId;
     private String registrationNumber;
+    private String message;
 }

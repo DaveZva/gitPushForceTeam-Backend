@@ -34,4 +34,6 @@ public class CatPayload {
     private String fatherPedigreeNumber;
     private String fatherBirthDate;
     private String fatherChipNumber;
+
+    private String exhibitionClass;
 }
