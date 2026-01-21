@@ -1,5 +1,6 @@
 package com.gpfteam.catshow.catshow_backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -39,6 +40,10 @@ public class Registration {
 
     @Column(nullable = false)
     private String days;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @ManyToOne(cascade = CascadeType.PERSIST)
     @JoinColumn(name = "owner_id", nullable = false)

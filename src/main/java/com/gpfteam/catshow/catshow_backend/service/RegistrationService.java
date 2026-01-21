@@ -8,12 +8,17 @@ import com.gpfteam.catshow.catshow_backend.dto.RegistrationResponse;
 import com.gpfteam.catshow.catshow_backend.model.*;
 import com.gpfteam.catshow.catshow_backend.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Example;
+import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,141 +28,186 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class RegistrationService {
 
+    private static final Logger logger = LoggerFactory.getLogger(RegistrationService.class);
+
     private final ShowRepository showRepository;
     private final RegistrationRepository registrationRepository;
     private final BreederRepository breederRepository;
     private final OwnerRepository ownerRepository;
     private final CatRepository catRepository;
     private final UserRepository userRepository;
-    private final RegistrationEntryRepository registrationEntryRepository;
 
     @Transactional
     public RegistrationResponse submitRegistration(RegistrationPayload payload) {
-        // 1. Načtení výstavy
-        Show show = showRepository.findById(Long.parseLong(payload.getShow().getId()))
-                .orElseThrow(() -> new IllegalArgumentException("Výstava s ID " + payload.getShow().getId() + " nenalezena."));
-
-        // 2. Zpracování majitele (pro registraci - kontakt)
-        PersonPayload bData = payload.getOwner();
-        Owner owner = ownerRepository.findByEmail(bData.getEmail())
-                .orElseGet(() -> {
-                    Owner newOwner = Owner.builder()
-                            .firstName(bData.getFirstName())
-                            .lastName(bData.getLastName())
-                            .address(bData.getAddress())
-                            .zip(bData.getZip())
-                            .city(bData.getCity())
-                            .email(bData.getEmail())
-                            .phone(bData.getPhone())
-                            .build();
-                    return ownerRepository.save(newOwner);
-                });
-
-        // 3. Zpracování chovatele
-        Breeder breeder;
-        if (payload.getBreeder() != null) {
-            PersonPayload eData = payload.getBreeder();
-            breeder = Breeder.builder()
-                    .firstName(eData.getFirstName())
-                    .lastName(eData.getLastName())
-                    .address(eData.getAddress())
-                    .zip(eData.getZip())
-                    .city(eData.getCity())
-                    .email(eData.getEmail())
-                    .phone(eData.getPhone())
-                    .build();
-        } else {
-            // Pokud není chovatel vyplněn, použijeme údaje majitele (běžná praxe, pokud si chovají sami)
-            breeder = Breeder.builder()
-                    .firstName(bData.getFirstName())
-                    .lastName(bData.getLastName())
-                    .address(bData.getAddress())
-                    .zip(bData.getZip())
-                    .city(bData.getCity())
-                    .email(bData.getEmail())
-                    .phone(bData.getPhone())
-                    .build();
+        Long showId;
+        try {
+            showId = Long.parseLong(payload.getShow().getId());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Neplatné ID výstavy.");
         }
-        breederRepository.save(breeder);
 
-        // 4. Vytvoření hlavičky registrace
-        Registration registration = Registration.builder()
-                .show(show)
-                .days(payload.getShow().getDays())
-                .owner(owner)
-                .breeder(breeder)
-                .notes(payload.getNotes())
-                .dataAccuracy(payload.getConsents().getOrDefault("dataAccuracy", false))
-                .gdprConsent(payload.getConsents().getOrDefault("gdpr", false))
-                .status(Registration.RegistrationStatus.PLANNED)
-                .build();
+        Show show = showRepository.findById(showId)
+                .orElseThrow(() -> new IllegalArgumentException("Výstava nenalezena."));
 
-        // 5. Získání aktuálního uživatele (pro přiřazení koček k profilu)
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = null;
         if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
-            currentUser = userRepository.findByEmail(auth.getName()).orElse(null);
+            currentUser = userRepository.findByEmail(auth.getName())
+                    .orElseThrow(() -> new UsernameNotFoundException("Uživatel nenalezen"));
+        } else {
+            throw new IllegalStateException("Pro registraci musíte být přihlášen.");
         }
 
-        // 6. Zpracování koček (Profil + Entry)
+        Owner owner = findOrCreateOwner(payload.getOwner());
+        Breeder breeder = findOrCreateBreeder(payload.getBreeder(), owner);
+
+        Registration registration = Registration.builder()
+                .show(show)
+                .owner(owner)
+                .breeder(breeder)
+                .status(Registration.RegistrationStatus.PLANNED)
+                .days(payload.getShow().getDays())
+                .notes(payload.getNotes())
+                .dataAccuracy(payload.getConsents() != null && payload.getConsents().getOrDefault("dataAccuracy", false))
+                .gdprConsent(payload.getConsents() != null && payload.getConsents().getOrDefault("gdpr", false))
+                .registrationNumber("PENDING-" + System.currentTimeMillis())
+                .user(currentUser)
+                .build();
+
         List<RegistrationEntry> entries = new ArrayList<>();
-
-        for (CatPayload cData : payload.getCats()) {
-            // A) Najdi nebo vytvoř profil kočky (Cat)
-            Cat cat = findOrCreateCat(cData, currentUser);
-
-            // B) Vytvoř položku přihlášky (RegistrationEntry)
-            RegistrationEntry entry = mapToEntry(cData, registration, cat);
-            entries.add(entry);
+        if (payload.getCats() != null) {
+            for (CatPayload cData : payload.getCats()) {
+                Cat cat = findOrCreateCat(cData, currentUser);
+                RegistrationEntry entry = mapToEntry(cData, registration, cat);
+                entries.add(entry);
+            }
         }
-
         registration.setEntries(entries);
 
-        // Dočasné ID pro uložení
-        registration.setRegistrationNumber("PLANNED-" + System.currentTimeMillis());
         Registration savedRegistration = registrationRepository.save(registration);
 
-        // Finální vygenerování čísla přihlášky
-        String regNumber = "REG-" + Year.now().getValue() + "-" + savedRegistration.getId();
-        savedRegistration.setRegistrationNumber(regNumber);
+        String finalRegNumber = "REG-" + Year.now().getValue() + "-" + savedRegistration.getId();
+        savedRegistration.setRegistrationNumber(finalRegNumber);
         registrationRepository.save(savedRegistration);
 
         return RegistrationResponse.builder()
-                .registrationNumber(regNumber)
+                .registrationId(savedRegistration.getId())
+                .registrationNumber(finalRegNumber)
+                .message("Registrace úspěšně vytvořena")
                 .build();
     }
 
-    /**
-     * Pokusí se najít existující kočku pro uživatele (podle čipu nebo jména).
-     * Pokud nenajde, vytvoří novou.
-     */
-    private Cat findOrCreateCat(CatPayload cData, User user) {
-        Cat cat;
+    private Owner findOrCreateOwner(PersonPayload data) {
+        Owner probe = new Owner();
+        probe.setEmail(data.getEmail());
 
-        if (user != null) {
+        ExampleMatcher matcher = ExampleMatcher.matching()
+                .withIgnorePaths("id")
+                .withIgnoreNullValues();
+
+        return ownerRepository.findOne(Example.of(probe, matcher))
+                .orElseGet(() -> {
+                    Owner newOwner = new Owner();
+                    newOwner.setFirstName(data.getFirstName());
+                    newOwner.setLastName(data.getLastName());
+                    newOwner.setAddress(data.getAddress());
+                    newOwner.setZip(data.getZip());
+                    newOwner.setCity(data.getCity());
+                    newOwner.setEmail(data.getEmail());
+                    newOwner.setPhone(data.getPhone());
+                    newOwner.setOwnerLocalOrganization(data.getOwnerLocalOrganization());
+                    newOwner.setOwnerMembershipNumber(data.getOwnerMembershipNumber());
+                    return ownerRepository.save(newOwner);
+                });
+    }
+
+    private Breeder findOrCreateBreeder(PersonPayload data, Owner owner) {
+        if (data == null || data.getFirstName() == null || data.getFirstName().isEmpty()) {
+            Breeder copy = new Breeder();
+            copy.setFirstName(owner.getFirstName());
+            copy.setLastName(owner.getLastName());
+            copy.setAddress(owner.getAddress());
+            copy.setZip(owner.getZip());
+            copy.setCity(owner.getCity());
+            copy.setEmail(owner.getEmail());
+            copy.setPhone(owner.getPhone());
+            return breederRepository.save(copy);
+        }
+
+        Breeder probe = new Breeder();
+        probe.setEmail(data.getEmail());
+
+        ExampleMatcher matcher = ExampleMatcher.matching()
+                .withIgnorePaths("id")
+                .withIgnoreNullValues();
+
+        return breederRepository.findOne(Example.of(probe, matcher))
+                .orElseGet(() -> {
+                    Breeder newBreeder = new Breeder();
+                    newBreeder.setFirstName(data.getFirstName());
+                    newBreeder.setLastName(data.getLastName());
+                    newBreeder.setAddress(data.getAddress());
+                    newBreeder.setZip(data.getZip());
+                    newBreeder.setCity(data.getCity());
+                    newBreeder.setEmail(data.getEmail());
+                    newBreeder.setPhone(data.getPhone());
+                    return breederRepository.save(newBreeder);
+                });
+    }
+
+    private Cat findOrCreateCat(CatPayload cData, User user) {
+        if (cData.getChipNumber() != null && !cData.getChipNumber().isEmpty()) {
             Cat probe = new Cat();
+            probe.setChipNumber(cData.getChipNumber());
             probe.setOwnerUser(user);
 
-            if (cData.getChipNumber() != null && !cData.getChipNumber().isEmpty()) {
-                probe.setChipNumber(cData.getChipNumber());
-            } else {
-                probe.setCatName(cData.getCatName());
-            }
-
             Optional<Cat> existing = catRepository.findOne(Example.of(probe));
-
             if (existing.isPresent()) {
-                cat = existing.get();
+                Cat cat = existing.get();
                 updateCatFields(cat, cData);
                 return catRepository.save(cat);
             }
         }
 
-        cat = new Cat();
+        Cat cat = new Cat();
         cat.setOwnerUser(user);
         updateCatFields(cat, cData);
-
         return catRepository.save(cat);
+    }
+
+    private void updateCatFields(Cat cat, CatPayload cData) {
+        cat.setCatName(cData.getCatName());
+        cat.setTitleBefore(cData.getTitleBefore());
+        cat.setTitleAfter(cData.getTitleAfter());
+        cat.setEmsCode(cData.getEmsCode());
+        cat.setBirthDate(cData.getBirthDate());
+        cat.setPedigreeNumber(cData.getPedigreeNumber());
+        cat.setChipNumber(cData.getChipNumber());
+        cat.setCatGroup(cData.getGroup());
+
+        if (cData.getGender() != null) {
+            try {
+                cat.setGender(Cat.Gender.valueOf(cData.getGender().toUpperCase()));
+            } catch (Exception e) {
+                logger.warn("Neznámé pohlaví: {}", cData.getGender());
+            }
+        }
+
+        cat.setFatherName(cData.getFatherName());
+        cat.setFatherTitleBefore(cData.getFatherTitleBefore());
+        cat.setFatherTitleAfter(cData.getFatherTitleAfter());
+        cat.setFatherEmsCode(cData.getFatherEmsCode());
+        cat.setFatherPedigreeNumber(cData.getFatherPedigreeNumber());
+        cat.setFatherBirthDate(cData.getFatherBirthDate());
+        cat.setFatherChipNumber(cData.getFatherChipNumber());
+
+        cat.setMotherName(cData.getMotherName());
+        cat.setMotherTitleBefore(cData.getMotherTitleBefore());
+        cat.setMotherTitleAfter(cData.getMotherTitleAfter());
+        cat.setMotherEmsCode(cData.getMotherEmsCode());
+        cat.setMotherPedigreeNumber(cData.getMotherPedigreeNumber());
+        cat.setMotherBirthDate(cData.getMotherBirthDate());
+        cat.setMotherChipNumber(cData.getMotherChipNumber());
     }
 
     private RegistrationEntry mapToEntry(CatPayload cData, Registration reg, Cat cat) {
@@ -165,26 +215,55 @@ public class RegistrationService {
         entry.setRegistration(reg);
         entry.setCat(cat);
 
-        // ShowClass
-        String showClassString = cData.getShowClass().toUpperCase().replace("-", "_");
-        RegistrationEntry.ShowClass showClassEnum = RegistrationEntry.ShowClass.valueOf(showClassString);
-        entry.setShowClass(showClassEnum);
+        if (cData.getShowClass() != null) {
+            entry.setShowClass(mapShowClass(cData.getShowClass()));
+        }
 
-        // CageType
-        RegistrationEntry.CageType cageTypeEnum = RegistrationEntry.CageType.valueOf(cData.getCageType().toUpperCase());
-        entry.setCageType(cageTypeEnum);
+        if (cData.getCageType() != null) {
+            entry.setCageType(mapCageType(cData.getCageType()));
+        }
 
-        // Neutered
         boolean isNeutered = "YES".equalsIgnoreCase(cData.getNeutered()) || "TRUE".equalsIgnoreCase(cData.getNeutered());
         entry.setNeutered(isNeutered);
 
-        if (reg.getShow().getStatus() == Show.ShowStatus.CLOSED) {
-            Integer maxNum = registrationEntryRepository.findMaxCatalogNumberByShowId(reg.getShow().getId());
-            int nextNum = (maxNum == null) ? 1 : maxNum + 1;
-            entry.setCatalogNumber(nextNum);
-        }
-
         return entry;
+    }
+
+    private RegistrationEntry.ShowClass mapShowClass(String input) {
+        try {
+            return RegistrationEntry.ShowClass.valueOf(input.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            switch (input.trim()) {
+                case "1": return RegistrationEntry.ShowClass.SUPREME_CHAMPION;
+                case "2": return RegistrationEntry.ShowClass.SUPREME_PREMIOR;
+                case "3": return RegistrationEntry.ShowClass.GRANT_INTER_CHAMPION;
+                case "4": return RegistrationEntry.ShowClass.GRANT_INTER_PREMIER;
+                case "5": return RegistrationEntry.ShowClass.INTERNATIONAL_CHAMPION;
+                case "6": return RegistrationEntry.ShowClass.INTERNATIONAL_PREMIER;
+                case "7": return RegistrationEntry.ShowClass.CHAMPION;
+                case "8": return RegistrationEntry.ShowClass.PREMIER;
+                case "9": return RegistrationEntry.ShowClass.OPEN;
+                case "10": return RegistrationEntry.ShowClass.NEUTER;
+                case "11": return RegistrationEntry.ShowClass.JUNIOR;
+                case "12": return RegistrationEntry.ShowClass.KITTEN;
+                default:
+                    logger.warn("Nenalezeno mapování pro třídu: {}", input);
+                    return null;
+            }
+        }
+    }
+
+    private RegistrationEntry.CageType mapCageType(String input) {
+        String normalized = input.toUpperCase().trim();
+        if (normalized.contains("OWN")) return RegistrationEntry.CageType.OWN_CAGE;
+        if (normalized.contains("SINGLE")) return RegistrationEntry.CageType.RENT_SMALL;
+        if (normalized.contains("DOUBLE")) return RegistrationEntry.CageType.RENT_LARGE;
+
+        try {
+            return RegistrationEntry.CageType.valueOf(normalized);
+        } catch (IllegalArgumentException e) {
+            return RegistrationEntry.CageType.OWN_CAGE;
+        }
     }
 
     public RegistrationDetailResponse getRegistrationDetail(Long id) {
@@ -193,8 +272,10 @@ public class RegistrationService {
 
         String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
 
-        if (!registration.getOwner().getEmail().equalsIgnoreCase(currentUserEmail)) {
-            throw new RuntimeException("Nemáte oprávnění zobrazit tuto registraci.");
+        boolean isOwner = registration.getOwner().getEmail().equalsIgnoreCase(currentUserEmail);
+
+        if (!isOwner) {
+            throw new RuntimeException("Neoprávněný přístup.");
         }
 
         return RegistrationDetailResponse.builder()
@@ -202,44 +283,7 @@ public class RegistrationService {
                 .registrationNumber(registration.getRegistrationNumber())
                 .status(registration.getStatus())
                 .amountPaid(registration.getAmountPaid())
-                .paidAt(registration.getPaidAt())
                 .showName(registration.getShow().getName())
                 .build();
-    }
-
-    private void updateCatFields(Cat cat, CatPayload cData) {
-        cat.setCatName(cData.getCatName());
-        cat.setTitleBefore(cData.getTitleBefore());
-        cat.setTitleAfter(cData.getTitleAfter());
-        cat.setChipNumber(cData.getChipNumber());
-        cat.setEmsCode(cData.getEmsCode());
-        cat.setBirthDate(cData.getBirthDate());
-        cat.setPedigreeNumber(cData.getPedigreeNumber());
-
-        // Uložení skupiny (nezapomeňte přidat toto pole do entity Cat a CatPayload)
-        cat.setCatGroup(cData.getGroup());
-
-        // Bezpečný převod pohlaví
-        if (cData.getGender() != null) {
-            cat.setGender(Cat.Gender.valueOf(cData.getGender().toUpperCase()));
-        }
-
-        // Rodiče - Otec
-        cat.setFatherTitleBefore(cData.getFatherTitleBefore());
-        cat.setFatherName(cData.getFatherName());
-        cat.setFatherTitleAfter(cData.getFatherTitleAfter());
-        cat.setFatherEmsCode(cData.getFatherEmsCode());
-        cat.setFatherBirthDate(cData.getFatherBirthDate());
-        cat.setFatherChipNumber(cData.getFatherChipNumber());
-        cat.setFatherPedigreeNumber(cData.getFatherPedigreeNumber());
-
-        // Rodiče - Matka
-        cat.setMotherTitleBefore(cData.getMotherTitleBefore());
-        cat.setMotherName(cData.getMotherName());
-        cat.setMotherTitleAfter(cData.getMotherTitleAfter());
-        cat.setMotherEmsCode(cData.getMotherEmsCode());
-        cat.setMotherBirthDate(cData.getMotherBirthDate());
-        cat.setMotherChipNumber(cData.getMotherChipNumber());
-        cat.setMotherPedigreeNumber(cData.getMotherPedigreeNumber());
     }
 }
