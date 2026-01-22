@@ -30,6 +30,7 @@ public class SecretariatController {
     private final UserRepository userRepository;
     private final JudgeRepository judgeRepository;
     private final RegistrationEntryRepository registrationEntryRepository;
+    private final CatRepository catRepository; // Přidáno pro ukládání změn kočky
     private final PaymentService paymentService;
 
     @GetMapping
@@ -82,24 +83,20 @@ public class SecretariatController {
                 .name(show.getName())
                 .description(show.getDescription())
                 .status(show.getStatus().name())
-
                 .venueName(show.getVenueName())
                 .venueCity(show.getVenueCity())
                 .venueAddress(show.getVenueAddress())
                 .venueState(show.getVenueState())
                 .venueZip(show.getVenueZip())
-
                 .organizerName(show.getOrganizerName())
                 .organizerContactEmail(show.getOrganizerContactEmail())
                 .organizerWebsiteUrl(show.getOrganizerWebsiteUrl())
-
                 .startDate(show.getStartDate())
                 .endDate(show.getEndDate())
                 .registrationDeadline(show.getRegistrationDeadline())
                 .vetCheckStart(show.getVetCheckStart())
                 .judgingStart(show.getJudgingStart())
                 .judgingEnd(show.getJudgingEnd())
-
                 .totalRegistrations(registrations.size())
                 .totalCats(totalCats)
                 .confirmedRegistrations(confirmedRegs)
@@ -118,9 +115,12 @@ public class SecretariatController {
                 dtos.add(SecretariatRegistrationDto.builder()
                         .id(entry.getId())
                         .registrationNumber(reg.getRegistrationNumber())
+                        .titleBefore(entry.getCat().getTitleBefore())
                         .catName(entry.getCat().getCatName())
+                        .titleAfter(entry.getCat().getTitleAfter())
                         .emsCode(entry.getCat().getEmsCode())
                         .gender(entry.getCat().getGender().name())
+                        .catGroup(entry.getCat().getCatGroup())
                         .showClass(entry.getShowClass() != null ? entry.getShowClass().name() : "")
                         .ownerName(reg.getOwner().getFirstName() + " " + reg.getOwner().getLastName())
                         .ownerEmail(reg.getOwner().getEmail())
@@ -138,8 +138,11 @@ public class SecretariatController {
         return ResponseEntity.ok(SecretariatEntryDetailDto.builder()
                 .entryId(entry.getId())
                 .catId(cat.getId())
+                .titleBefore(cat.getTitleBefore())
                 .catName(cat.getCatName())
+                .titleAfter(cat.getTitleAfter())
                 .emsCode(cat.getEmsCode())
+                .catGroup(cat.getCatGroup())
                 .gender(cat.getGender().name())
                 .birthDate(cat.getBirthDate())
                 .pedigreeNumber(cat.getPedigreeNumber())
@@ -153,14 +156,38 @@ public class SecretariatController {
     public ResponseEntity<Void> updateEntry(@PathVariable Long id, @RequestBody SecretariatEntryDetailDto dto) {
         RegistrationEntry entry = registrationEntryRepository.findById(id).orElseThrow();
         Cat cat = entry.getCat();
+
+        cat.setTitleBefore(dto.getTitleBefore());
         cat.setCatName(dto.getCatName());
+        cat.setTitleAfter(dto.getTitleAfter());
         cat.setEmsCode(dto.getEmsCode());
+        cat.setCatGroup(dto.getCatGroup());
         cat.setPedigreeNumber(dto.getPedigreeNumber());
         cat.setChipNumber(dto.getChipNumber());
-        if(dto.getGender() != null) try { cat.setGender(Cat.Gender.valueOf(dto.getGender())); } catch (Exception e) {}
-        if (dto.getShowClass() != null && !dto.getShowClass().isEmpty()) try { entry.setShowClass(RegistrationEntry.ShowClass.valueOf(dto.getShowClass())); } catch (Exception e) {}
-        if (dto.getCatalogNumber() != null && !dto.getCatalogNumber().isEmpty()) try { entry.setCatalogNumber(Integer.parseInt(dto.getCatalogNumber())); } catch (Exception e) {}
+
+        if (dto.getGender() != null) {
+            try {
+                cat.setGender(Cat.Gender.valueOf(dto.getGender()));
+            } catch (Exception e) {}
+        }
+
+        if (dto.getShowClass() != null && !dto.getShowClass().isEmpty()) {
+            try {
+                entry.setShowClass(RegistrationEntry.ShowClass.valueOf(dto.getShowClass().toUpperCase()));
+            } catch (Exception e) {
+                System.err.println("Chyba při parsování ShowClass: " + dto.getShowClass());
+            }
+        }
+
+        if (dto.getCatalogNumber() != null && !dto.getCatalogNumber().isEmpty()) {
+            try {
+                entry.setCatalogNumber(Integer.parseInt(dto.getCatalogNumber()));
+            } catch (Exception e) {}
+        }
+
+        catRepository.save(cat);
         registrationEntryRepository.save(entry);
+
         return ResponseEntity.ok().build();
     }
 
@@ -233,7 +260,7 @@ public class SecretariatController {
     public ResponseEntity<Show> createShow(@Valid @RequestBody CreateShowRequest request) {
         Show show = Show.builder()
                 .name(request.getName())
-                .description(request.getDescription()) // Bylo vynecháno
+                .description(request.getDescription())
                 .status(Show.ShowStatus.PLANNED)
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())

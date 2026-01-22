@@ -9,8 +9,11 @@ public class SecretariatEntryDetailDto {
     private Long entryId;
     private Long catId;
 
+    private String titleBefore;
     private String catName;
+    private String titleAfter;
     private String emsCode;
+    private String catGroup;
     private String gender;
     private String birthDate;
     private String pedigreeNumber;
