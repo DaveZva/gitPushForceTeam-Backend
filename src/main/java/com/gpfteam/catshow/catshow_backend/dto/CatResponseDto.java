@@ -8,11 +8,17 @@ import lombok.Data;
 public class CatResponseDto {
     private Long id;
     private String catName;
+    private String titleBefore;
+    private String titleAfter;
     private String emsCode;
+    private String breed;
+    private Integer category;
     private String pedigreeNumber;
     private String chipNumber;
+    private String neutered;
     private String birthDate;
     private String gender;
+    private String group;
 
     private String fatherName;
     private String fatherTitleBefore;

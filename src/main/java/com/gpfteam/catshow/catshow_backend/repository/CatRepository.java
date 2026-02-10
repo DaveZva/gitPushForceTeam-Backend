@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface CatRepository extends JpaRepository<Cat, Long> {
     List<Cat> findByOwnerUserEmail(String email);
+    boolean existsByChipNumber(String chipNumber);
+    boolean existsByPedigreeNumber(String pedigreeNumber);
 }

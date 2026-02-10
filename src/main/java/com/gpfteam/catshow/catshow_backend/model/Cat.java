@@ -23,8 +23,15 @@ public class Cat {
     private String titleAfter;
     private String emsCode;
     private String birthDate;
+
+    @Column(unique = true)
     private String pedigreeNumber;
+
+    @Column(unique = true)
     private String chipNumber;
+
+    private String breed;
+    private Integer category;
     private String catGroup;
 
     @Enumerated(EnumType.STRING)
