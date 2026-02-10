@@ -10,6 +10,8 @@ public class PublicCatalogEntryDto {
     private int entryNumber;
     private String name;
     private String ems;
+    private String breed;
+    private Integer category;
     private String sex;
     private String birthDate;
     private String registrationNumber;
@@ -19,8 +21,6 @@ public class PublicCatalogEntryDto {
     private String ownerCountry;
     private String breederName;
     private String breederCountry;
-
-    private String category;
     private String color;
     private String className;
     private String group;

@@ -10,7 +10,8 @@ public class QuickCatalogEntryDto {
     private String catName;
     private String gender;
     private String emsCode;
+    private String breed;
+    private Integer category;
     private String showClass;
     private String group;
-    private int category;
 }

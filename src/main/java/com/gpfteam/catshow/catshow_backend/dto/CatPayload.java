@@ -7,12 +7,14 @@ public class CatPayload {
     private String titleBefore;
     private String catName;
     private String titleAfter;
+    private String breed;
     private String chipNumber;
     private String gender;
     private String neutered;
     private String emsCode;
     private String birthDate;
     private String group;
+    private Integer category;
     private String showClass;
     private String pedigreeNumber;
     private String cageType;

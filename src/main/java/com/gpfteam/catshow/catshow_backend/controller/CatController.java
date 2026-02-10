@@ -23,10 +23,6 @@ public class CatController {
     private final CatRepository catRepository;
     private final RegistrationRepository registrationRepository;
 
-    /**
-     * Vrátí všechny kočky přihlášeného uživatele.
-     * Může přijmout parametr showId pro zjištění, zda už je kočka registrována.
-     */
     @GetMapping("/my")
     public ResponseEntity<List<CatResponseDto>> getMyCats() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -65,6 +61,8 @@ public class CatController {
                 .chipNumber(cat.getChipNumber())
                 .birthDate(cat.getBirthDate())
                 .gender(cat.getGender().name())
+                .group(cat.getCatGroup())
+                .category(cat.getCategory())
                 .fatherName(cat.getFatherName())
                 .fatherTitleBefore(cat.getFatherTitleBefore())
                 .fatherTitleAfter(cat.getFatherTitleAfter())

@@ -12,6 +12,8 @@ public class SecretariatRegistrationDto {
     private String catName;
     private String titleAfter;
     private String emsCode;
+    private String breed;
+    private Integer category;
     private String gender;
     private String showClass;
     private String ownerName;

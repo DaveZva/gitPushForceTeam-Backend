@@ -35,24 +35,20 @@ public class CatalogService {
 
         log.info("Spouštím generování katalogu pro výstavu: {}", show.getName());
 
-        // 1. Změna stavu na CLOSED (pokud ještě není)
         if (show.getStatus() != Show.ShowStatus.CLOSED) {
             show.setStatus(Show.ShowStatus.CLOSED);
             showRepository.save(show);
         }
 
-        // 2. Načíst všechny CONFIRMED registrace
         List<Registration> confirmedRegistrations = registrationRepository.findByShowAndStatus(
                 show,
                 Registration.RegistrationStatus.CONFIRMED
         );
 
-        // 3. Vytáhnout z nich jednotlivé kočky (Entries)
         List<RegistrationEntry> entries = confirmedRegistrations.stream()
                 .flatMap(reg -> reg.getEntries().stream())
                 .collect(Collectors.toList());
 
-        // 4. Seřadit podle klíče: Kategorie -> Plemeno -> Třída -> Pohlaví -> Jméno
         entries.sort(Comparator
                 .comparingInt((RegistrationEntry e) -> EmsUtility.getCategory(e.getCat().getEmsCode()))
                 .thenComparing((RegistrationEntry e) -> e.getCat().getEmsCode().split(" ")[0]) // Pouze plemeno (např. MCO)
@@ -62,7 +58,6 @@ public class CatalogService {
                 .thenComparing(e -> e.getCat().getCatName())
         );
 
-        // 5. Očíslovat 1..N
         int counter = 1;
         for (RegistrationEntry entry : entries) {
             entry.setCatalogNumber(counter++);
@@ -200,7 +195,8 @@ public class CatalogService {
                 .ownerName(reg.getOwner().getFirstName() + " " + reg.getOwner().getLastName())
                 .breederName(reg.getBreeder().getFirstName() + " " + reg.getBreeder().getLastName())
                 .breederCountry(reg.getBreeder().getCity())
-                .category(c.getEmsCode().split(" ")[0])
+                .breed(EmsUtility.getBreedFromEms(c.getEmsCode()))
+                .category(EmsUtility.getCategory(c.getEmsCode()))
                 .color(c.getEmsCode())
                 .className(entry.getShowClass().name())
                 .group(c.getCatGroup())

@@ -7,6 +7,7 @@ import com.gpfteam.catshow.catshow_backend.dto.RegistrationPayload;
 import com.gpfteam.catshow.catshow_backend.dto.RegistrationResponse;
 import com.gpfteam.catshow.catshow_backend.model.*;
 import com.gpfteam.catshow.catshow_backend.repository.*;
+import com.gpfteam.catshow.catshow_backend.util.EmsUtility;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -180,6 +181,9 @@ public class RegistrationService {
         cat.setTitleBefore(cData.getTitleBefore());
         cat.setTitleAfter(cData.getTitleAfter());
         cat.setEmsCode(cData.getEmsCode());
+        String breed = EmsUtility.getBreedFromEms(cData.getEmsCode());
+        cat.setBreed(breed);
+        cat.setCategory(EmsUtility.getCategory(cData.getEmsCode()));
         cat.setBirthDate(cData.getBirthDate());
         cat.setPedigreeNumber(cData.getPedigreeNumber());
         cat.setChipNumber(cData.getChipNumber());
