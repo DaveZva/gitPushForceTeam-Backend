@@ -13,6 +13,7 @@ import com.gpfteam.catshow.catshow_backend.repository.RegistrationRepository;
 import java.util.ArrayList;
 
 import com.gpfteam.catshow.catshow_backend.service.CatalogService;
+import com.gpfteam.catshow.catshow_backend.util.EmsUtility;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -98,7 +99,8 @@ public class PublicShowController {
                 .ownerName(reg.getOwner().getFirstName() + " " + reg.getOwner().getLastName())
                 .breederName(breederName)
                 .breederCountry(breederCountry)
-                .category(category)
+                .breed(EmsUtility.getBreedFromEms(cat.getEmsCode()))
+                .category(EmsUtility.getCategory(cat.getEmsCode()))
                 .color(emsCode)
                 .className(entry.getShowClass() != null ? entry.getShowClass().name() : "")
                 .group(cat.getCatGroup())

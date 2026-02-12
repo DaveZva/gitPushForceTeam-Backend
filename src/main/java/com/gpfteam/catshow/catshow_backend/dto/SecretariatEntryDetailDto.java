@@ -13,6 +13,8 @@ public class SecretariatEntryDetailDto {
     private String catName;
     private String titleAfter;
     private String emsCode;
+    private String breed;
+    private Integer category;
     private String catGroup;
     private String gender;
     private String birthDate;
