@@ -35,34 +35,29 @@ public class CatalogService {
 
         log.info("Spouštím generování katalogu pro výstavu: {}", show.getName());
 
-        // 1. Změna stavu na CLOSED (pokud ještě není)
         if (show.getStatus() != Show.ShowStatus.CLOSED) {
             show.setStatus(Show.ShowStatus.CLOSED);
             showRepository.save(show);
         }
 
-        // 2. Načíst všechny CONFIRMED registrace
         List<Registration> confirmedRegistrations = registrationRepository.findByShowAndStatus(
                 show,
                 Registration.RegistrationStatus.CONFIRMED
         );
 
-        // 3. Vytáhnout z nich jednotlivé kočky (Entries)
         List<RegistrationEntry> entries = confirmedRegistrations.stream()
                 .flatMap(reg -> reg.getEntries().stream())
                 .collect(Collectors.toList());
 
-        // 4. Seřadit podle klíče: Kategorie -> Plemeno -> Třída -> Pohlaví -> Jméno
         entries.sort(Comparator
                 .comparingInt((RegistrationEntry e) -> EmsUtility.getCategory(e.getCat().getEmsCode()))
-                .thenComparing((RegistrationEntry e) -> e.getCat().getEmsCode().split(" ")[0]) // Pouze plemeno (např. MCO)
-                .thenComparing((RegistrationEntry e) -> e.getCat().getCatGroup(), Comparator.nullsFirst(Comparator.naturalOrder())) // Skupina (1, 2, 3...)
+                .thenComparing((RegistrationEntry e) -> e.getCat().getEmsCode().split(" ")[0])
+                .thenComparing((RegistrationEntry e) -> e.getCat().getCatGroup(), Comparator.nullsFirst(Comparator.naturalOrder()))
                 .thenComparingInt(e -> getClassRank(e.getShowClass()))
                 .thenComparing(e -> e.getCat().getGender())
                 .thenComparing(e -> e.getCat().getCatName())
         );
 
-        // 5. Očíslovat 1..N
         int counter = 1;
         for (RegistrationEntry entry : entries) {
             entry.setCatalogNumber(counter++);
@@ -73,9 +68,6 @@ public class CatalogService {
         return entries.size();
     }
 
-    /**
-     * Helper pro pozdní registrace - přidělí číslo na konec řady.
-     */
     @Transactional
     public void assignNumberToLateEntry(RegistrationEntry entry) {
         Long showId = entry.getRegistration().getShow().getId();
@@ -86,7 +78,6 @@ public class CatalogService {
         registrationEntryRepository.save(entry);
     }
 
-    // Pomocná metoda pro řazení tříd sestupně (od Supreme po koťata)
     private int getClassRank(RegistrationEntry.ShowClass showClass) {
         if (showClass == null) return 99;
         return switch (showClass) {
@@ -155,18 +146,15 @@ public class CatalogService {
         Show show = showRepository.findById(showId)
                 .orElseThrow(() -> new IllegalArgumentException("Show not found"));
 
-        // Načtení pouze potvrzených registrací
         List<Registration> confirmedRegistrations = registrationRepository.findByShowAndStatus(
                 show, Registration.RegistrationStatus.CONFIRMED
         );
 
-        // Převedení na jednotlivé záznamy koček, které mají přidělené číslo v katalogu
         List<RegistrationEntry> entries = confirmedRegistrations.stream()
                 .flatMap(reg -> reg.getEntries().stream())
                 .filter(e -> e.getCatalogNumber() != null)
                 .collect(Collectors.toList());
 
-        // Seřazení: Kategorie -> Plemeno -> Skupina -> Třída -> Pohlaví -> Jméno
         entries.sort(Comparator
                 .comparingInt((RegistrationEntry e) -> EmsUtility.getCategory(e.getCat().getEmsCode()))
                 .thenComparing((RegistrationEntry e) -> e.getCat().getEmsCode().split(" ")[0])
