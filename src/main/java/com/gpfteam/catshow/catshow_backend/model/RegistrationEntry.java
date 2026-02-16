@@ -23,6 +23,7 @@ public class RegistrationEntry {
     private Registration registration;
 
     @ManyToOne
+    @JoinColumn(name = "cat_id")
     private Cat cat;
 
     @Enumerated(EnumType.STRING)

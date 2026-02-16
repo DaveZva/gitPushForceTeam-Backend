@@ -89,6 +89,22 @@ public class JudgingSheetController {
         }
     }
 
+    @GetMapping("/judges/{judgeId}/sheets/pdf")
+    public ResponseEntity<byte[]> downloadJudgeSheetsPdf(
+            @PathVariable Long showId,
+            @PathVariable Long judgeId,
+            @RequestParam String day) {
+        try {
+            byte[] pdfContent = judgingSheetService.generatePdfForJudge(showId, judgeId, day);
+            return ResponseEntity.ok()
+                    .header("Content-Type", "application/pdf")
+                    .header("Content-Disposition", "attachment; filename=judging_sheets_" + judgeId + ".pdf")
+                    .body(pdfContent);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     static class ErrorResponse {
         public String message;
         public ErrorResponse(String message) { this.message = message; }

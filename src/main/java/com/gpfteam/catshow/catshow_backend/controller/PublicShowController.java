@@ -137,6 +137,7 @@ public class PublicShowController {
                 .venueCity(show.getVenueCity())
                 .organizerName(show.getOrganizerName())
                 .organizerWebsiteUrl(show.getOrganizerWebsiteUrl())
+                .organizerContactEmail(show.getOrganizerContactEmail())
 
                 .startDate(show.getStartDate())
                 .endDate(show.getEndDate())
