@@ -4,28 +4,37 @@ import com.gpfteam.catshow.catshow_backend.model.*;
 import com.gpfteam.catshow.catshow_backend.repository.*;
 import com.gpfteam.catshow.catshow_backend.util.EmsUtility;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class JudgeAssignmentService {
 
     private final ShowRepository showRepository;
     private final JudgeAssignmentRepository judgeAssignmentRepository;
     private final RegistrationEntryRepository registrationEntryRepository;
-    private final JudgingSheetRepository judgingSheetRepository;
 
     @Transactional
     public Map<Long, List<RegistrationEntry>> distributeWorkloadEvenly(Long showId, String day) {
-        Show show = showRepository.findById(showId).orElseThrow();
+        Show show = showRepository.findById(showId)
+                .orElseThrow(() -> new IllegalArgumentException("Show not found: " + showId));
+
         List<Judge> availableJudges = show.getJudges();
+        if (availableJudges == null || availableJudges.isEmpty()) {
+            throw new IllegalStateException("K výstavě nejsou přiřazeni žádní rozhodčí (No judges assigned to show).");
+        }
 
         List<RegistrationEntry> catsToJudge = registrationEntryRepository.findByShowAndStatusConfirmed(showId, day);
+        if (catsToJudge.isEmpty()) {
+            log.warn("No cats found for show {} and day {}", showId, day);
+            return new HashMap<>();
+        }
 
         Map<String, List<RegistrationEntry>> catsByBreedGroup = groupCatsByBreedAndGroup(catsToJudge);
 
@@ -41,21 +50,20 @@ public class JudgeAssignmentService {
         for (JudgeAssignment assignment : manualAssignments) {
             List<RegistrationEntry> assignedCats = findCatsMatchingAssignment(catsToJudge, assignment);
 
-            judgeAssignments.get(assignment.getJudge().getId()).addAll(assignedCats);
-            judgeWorkload.put(assignment.getJudge().getId(),
-                    judgeWorkload.get(assignment.getJudge().getId()) + assignedCats.size());
+            if (!assignedCats.isEmpty()) {
+                Long judgeId = assignment.getJudge().getId();
+                if (judgeAssignments.containsKey(judgeId)) {
+                    judgeAssignments.get(judgeId).addAll(assignedCats);
+                    judgeWorkload.put(judgeId, judgeWorkload.get(judgeId) + assignedCats.size());
 
-            catsToJudge.removeAll(assignedCats);
-            catsByBreedGroup.values().forEach(list -> list.removeAll(assignedCats));
+                    catsToJudge.removeAll(assignedCats);
+                    catsByBreedGroup.values().forEach(list -> list.removeAll(assignedCats));
+                }
+            }
         }
 
         List<String> breedGroups = new ArrayList<>(catsByBreedGroup.keySet());
-        breedGroups.sort((a, b) ->
-                Integer.compare(
-                        catsByBreedGroup.get(b).size(),
-                        catsByBreedGroup.get(a).size()
-                )
-        );
+        breedGroups.sort((a, b) -> Integer.compare(catsByBreedGroup.get(b).size(), catsByBreedGroup.get(a).size()));
 
         for (String breedGroup : breedGroups) {
             List<RegistrationEntry> cats = catsByBreedGroup.get(breedGroup);
@@ -66,7 +74,8 @@ public class JudgeAssignmentService {
                     .collect(Collectors.toList());
 
             if (qualifiedJudges.isEmpty()) {
-                throw new IllegalStateException("No qualified judge for group: " + breedGroup);
+                throw new IllegalStateException("Nenalezen žádný kvalifikovaný rozhodčí pro kategorii: " + breedGroup +
+                        ". Zkontrolujte nastavení skupin u rozhodčích.");
             }
 
             Judge selectedJudge = qualifiedJudges.stream()
@@ -74,8 +83,7 @@ public class JudgeAssignmentService {
                     .orElseThrow();
 
             judgeAssignments.get(selectedJudge.getId()).addAll(cats);
-            judgeWorkload.put(selectedJudge.getId(),
-                    judgeWorkload.get(selectedJudge.getId()) + cats.size());
+            judgeWorkload.put(selectedJudge.getId(), judgeWorkload.get(selectedJudge.getId()) + cats.size());
         }
 
         balanceWorkloadIfNeeded(judgeAssignments, judgeWorkload, availableJudges);
@@ -87,29 +95,39 @@ public class JudgeAssignmentService {
         Map<String, List<RegistrationEntry>> grouped = new HashMap<>();
 
         for (RegistrationEntry entry : cats) {
-            Cat cat = entry.getCat();
-            String emsCode = cat.getEmsCode();
-            String breedCode = emsCode.split(" ")[0];
-            String group = cat.getCatGroup();
+            try {
+                Cat cat = entry.getCat();
+                String emsCode = cat.getEmsCode();
+                String breedCode = emsCode.split(" ")[0];
+                String group = cat.getCatGroup();
 
-            String category = "CAT" + EmsUtility.getCategory(emsCode);
-            String key = category + "-" + breedCode + "-" + (group != null ? group : "");
+                int categoryNum = EmsUtility.getCategory(emsCode);
+                String category = "CAT" + categoryNum;
 
-            grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(entry);
+                String key = category + "-" + breedCode + "-" + (group != null ? group : "");
+
+                grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(entry);
+            } catch (Exception e) {
+                log.error("Error grouping cat ID {}: {}", entry.getCat().getId(), e.getMessage());
+            }
         }
 
         return grouped;
     }
 
     private boolean isQualifiedForBreedGroup(Judge judge, String breedGroupKey) {
-        String[] parts = breedGroupKey.split("-");
-        String category = parts[0];
+        if (judge.getValidGroups() == null) return false;
 
-        int fifeCategory = Integer.parseInt(category.substring(3));
+        String[] parts = breedGroupKey.split("-");
+        String categoryStr = parts[0];
+
+        String categoryNumber = categoryStr.replace("CAT", "");
 
         List<String> validGroups = judge.getValidGroups();
 
-        return validGroups.contains("CAT" + fifeCategory) ||
+        return validGroups.contains(categoryNumber) ||
+                validGroups.contains(categoryStr) ||
+                validGroups.contains("Category " + categoryNumber) ||
                 validGroups.contains("ALL_BREEDS") ||
                 validGroups.contains("AB");
     }
@@ -119,46 +137,30 @@ public class JudgeAssignmentService {
             Map<Long, Integer> workload,
             List<Judge> judges) {
 
-        double avgWorkload = workload.values().stream()
-                .mapToInt(Integer::intValue)
-                .average()
-                .orElse(0);
+        if (workload.isEmpty()) return;
 
-        Long mostLoadedJudgeId = workload.entrySet().stream()
-                .max(Map.Entry.comparingByValue())
-                .map(Map.Entry::getKey)
-                .orElse(null);
+        double avgWorkload = workload.values().stream().mapToInt(Integer::intValue).average().orElse(0);
 
-        Long leastLoadedJudgeId = workload.entrySet().stream()
-                .min(Map.Entry.comparingByValue())
-                .map(Map.Entry::getKey)
-                .orElse(null);
+        Long mostLoadedId = Collections.max(workload.entrySet(), Map.Entry.comparingByValue()).getKey();
+        Long leastLoadedId = Collections.min(workload.entrySet(), Map.Entry.comparingByValue()).getKey();
 
-        if (mostLoadedJudgeId == null || leastLoadedJudgeId == null) return;
+        int maxLoad = workload.get(mostLoadedId);
+        int minLoad = workload.get(leastLoadedId);
 
-        int maxLoad = workload.get(mostLoadedJudgeId);
-        int minLoad = workload.get(leastLoadedJudgeId);
+        if (maxLoad - minLoad > Math.max(2, avgWorkload * 0.2)) {
+            Judge mostLoadedJudge = judges.stream().filter(j -> j.getId().equals(mostLoadedId)).findFirst().orElse(null);
+            Judge leastLoadedJudge = judges.stream().filter(j -> j.getId().equals(leastLoadedId)).findFirst().orElse(null);
 
-        if (maxLoad - minLoad > avgWorkload * 0.2) {
-
-            Judge mostLoaded = judges.stream()
-                    .filter(j -> j.getId().equals(mostLoadedJudgeId))
-                    .findFirst().orElse(null);
-            Judge leastLoaded = judges.stream()
-                    .filter(j -> j.getId().equals(leastLoadedJudgeId))
-                    .findFirst().orElse(null);
-
-            if (mostLoaded == null || leastLoaded == null) return;
+            if (mostLoadedJudge == null || leastLoadedJudge == null) return;
 
             List<RegistrationEntry> catsToMove = new ArrayList<>();
-            List<RegistrationEntry> mostLoadedCats = assignments.get(mostLoadedJudgeId);
+            List<RegistrationEntry> sourceCats = new ArrayList<>(assignments.get(mostLoadedId));
 
-            for (RegistrationEntry cat : mostLoadedCats) {
-                String breedGroup = getBreedGroupKey(cat);
+            for (RegistrationEntry cat : sourceCats) {
+                String breedGroupKey = getBreedGroupKey(cat);
 
-                if (isQualifiedForBreedGroup(leastLoaded, breedGroup)) {
+                if (isQualifiedForBreedGroup(leastLoadedJudge, breedGroupKey)) {
                     catsToMove.add(cat);
-
                     if (catsToMove.size() >= (maxLoad - minLoad) / 2) {
                         break;
                     }
@@ -166,13 +168,14 @@ public class JudgeAssignmentService {
             }
 
             if (!catsToMove.isEmpty()) {
-                assignments.get(mostLoadedJudgeId).removeAll(catsToMove);
-                assignments.get(leastLoadedJudgeId).addAll(catsToMove);
+                assignments.get(mostLoadedId).removeAll(catsToMove);
+                assignments.get(leastLoadedId).addAll(catsToMove);
 
-                workload.put(mostLoadedJudgeId,
-                        workload.get(mostLoadedJudgeId) - catsToMove.size());
-                workload.put(leastLoadedJudgeId,
-                        workload.get(leastLoadedJudgeId) + catsToMove.size());
+                workload.put(mostLoadedId, workload.get(mostLoadedId) - catsToMove.size());
+                workload.put(leastLoadedId, workload.get(leastLoadedId) + catsToMove.size());
+
+                log.info("Rebalanced {} cats from judge {} to judge {}",
+                        catsToMove.size(), mostLoadedJudge.getLastName(), leastLoadedJudge.getLastName());
             }
         }
     }
@@ -183,13 +186,14 @@ public class JudgeAssignmentService {
         String breedCode = emsCode.split(" ")[0];
         String group = cat.getCatGroup();
         String category = "CAT" + EmsUtility.getCategory(emsCode);
-
         return category + "-" + breedCode + "-" + (group != null ? group : "");
     }
 
     private List<RegistrationEntry> findCatsMatchingAssignment(
             List<RegistrationEntry> entries,
             JudgeAssignment assignment) {
+
+        if (assignment.getJudge() == null || assignment.getJudge().getValidGroups() == null) return Collections.emptyList();
 
         return entries.stream()
                 .filter(entry -> {
@@ -199,8 +203,8 @@ public class JudgeAssignmentService {
                     String breedCode = emsParts[0];
                     String colorCode = emsParts.length > 1 ? emsParts[1] : "";
 
-                    String breedGroup = getBreedGroup(breedCode);
-                    if (!assignment.getJudge().getValidGroups().contains(breedGroup)) {
+                    String breedGroupKey = getBreedGroupKey(entry);
+                    if (!isQualifiedForBreedGroup(assignment.getJudge(), breedGroupKey)) {
                         return false;
                     }
 
@@ -219,9 +223,5 @@ public class JudgeAssignmentService {
                     return true;
                 })
                 .collect(Collectors.toList());
-    }
-
-    private String getBreedGroup(String breedCode) {
-        return "CAT" + EmsUtility.getCategory(breedCode + " n");
     }
 }
