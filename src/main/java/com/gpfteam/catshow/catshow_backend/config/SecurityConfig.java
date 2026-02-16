@@ -44,7 +44,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/payments/**").authenticated()
                         .requestMatchers("/api/v1/payment-intents/**").authenticated()
 
-                        .requestMatchers("/api/v1/secretariat/**").hasAnyAuthority("SECRETARIAT", "ADMIN")
+                        .requestMatchers("/api/v1/secretariat/**").authenticated()
+
+                        //.requestMatchers("/api/v1/secretariat/**").hasAnyAuthority("SECRETARIAT", "ADMIN")
 
                         .anyRequest().authenticated()
                 )
