@@ -40,6 +40,10 @@ public class JudgingSheetService {
         Map<Long, List<RegistrationEntry>> distribution =
                 judgeAssignmentService.distributeWorkloadEvenly(showId, day);
 
+        if (distribution.isEmpty()) {
+            return;
+        }
+
         Show show = showRepository.findById(showId).orElseThrow();
 
         for (Map.Entry<Long, List<RegistrationEntry>> entry : distribution.entrySet()) {

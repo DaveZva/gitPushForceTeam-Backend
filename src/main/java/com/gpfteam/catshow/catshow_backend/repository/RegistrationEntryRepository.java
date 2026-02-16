@@ -25,6 +25,6 @@ public interface RegistrationEntryRepository extends JpaRepository<RegistrationE
 
     @Query("SELECT e FROM RegistrationEntry e WHERE e.registration.show.id = :showId " +
             "AND e.registration.status = 'CONFIRMED' " +
-            "AND e.registration.days LIKE %:day%")
+            "AND (e.registration.days LIKE %:day% OR e.registration.days = 'BOTH')")
     List<RegistrationEntry> findByShowAndStatusConfirmed(@Param("showId") Long showId, @Param("day") String day);
 }

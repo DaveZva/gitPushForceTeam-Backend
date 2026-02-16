@@ -4,47 +4,60 @@ import com.gpfteam.catshow.catshow_backend.dto.JudgeWorkloadDto;
 import com.gpfteam.catshow.catshow_backend.dto.JudgingSheetDto;
 import com.gpfteam.catshow.catshow_backend.service.JudgingSheetService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/secretariat/{showId}/judging")
+@RequestMapping("/api/v1/secretariat/shows/{showId}/judging")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
+@Slf4j
 public class JudgingSheetController {
 
     private final JudgingSheetService judgingSheetService;
 
     @PostMapping("/generate")
-    public ResponseEntity<String> generateSheets(@PathVariable Long showId) {
+    public ResponseEntity<?> generateSheets(@PathVariable Long showId) {
         try {
             judgingSheetService.generateJudgingSheetsForShow(showId);
-            return ResponseEntity.ok("Sheets generated");
+            return ResponseEntity.ok("Sheets generated successfully");
+        } catch (IllegalStateException e) {
+            log.warn("Logic error generating sheets: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+            log.error("Unexpected error generating sheets", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Unexpected error: " + e.getMessage()));
         }
     }
 
     @PostMapping("/generate-day")
-    public ResponseEntity<String> generateForDay(
+    public ResponseEntity<?> generateForDay(
             @PathVariable Long showId,
             @RequestParam String day) {
         try {
             judgingSheetService.generateForDay(showId, day);
             return ResponseEntity.ok("Sheets generated for " + day);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+            log.error("Error generating sheets for day", e);
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
     }
 
     @PostMapping("/judges/{judgeId}/regenerate")
-    public ResponseEntity<String> regenerateForJudge(
+    public ResponseEntity<?> regenerateForJudge(
             @PathVariable Long showId,
             @PathVariable Long judgeId) {
-        judgingSheetService.regenerateJudgingSheetsForJudge(showId, judgeId);
-        return ResponseEntity.ok("Sheets regenerated");
+        try {
+            judgingSheetService.regenerateJudgingSheetsForJudge(showId, judgeId);
+            return ResponseEntity.ok("Sheets regenerated");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        }
     }
 
     @GetMapping("/judges/{judgeId}/sheets")
@@ -65,10 +78,19 @@ public class JudgingSheetController {
     }
 
     @PostMapping("/rebalance")
-    public ResponseEntity<String> rebalanceWorkload(
+    public ResponseEntity<?> rebalanceWorkload(
             @PathVariable Long showId,
             @RequestParam String day) {
-        judgingSheetService.generateForDay(showId, day);
-        return ResponseEntity.ok("Workload rebalanced");
+        try {
+            judgingSheetService.generateForDay(showId, day);
+            return ResponseEntity.ok("Workload rebalanced");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
+    static class ErrorResponse {
+        public String message;
+        public ErrorResponse(String message) { this.message = message; }
     }
 }
