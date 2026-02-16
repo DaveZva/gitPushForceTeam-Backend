@@ -24,10 +24,10 @@ public class Registration {
     private String registrationNumber;
 
     public enum RegistrationStatus {
-        PLANNED,  // Čeká na zpracování / platbu
-        CONFIRMED, // Potvrzeno, zaplaceno
-        REJECTED,  // Zamítnuto
-        CANCELLED  // Zrušeno uživatelem
+        PLANNED,
+        CONFIRMED,
+        REJECTED,
+        CANCELLED
     }
 
     @Enumerated(EnumType.STRING)

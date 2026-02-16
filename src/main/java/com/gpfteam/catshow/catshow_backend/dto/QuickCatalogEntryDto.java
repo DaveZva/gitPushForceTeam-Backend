@@ -9,6 +9,7 @@ public class QuickCatalogEntryDto {
     private Integer catalogNumber;
     private String catName;
     private String gender;
+    private String birthDate;
     private String emsCode;
     private String breed;
     private Integer category;

@@ -12,100 +12,103 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 public class PdfGenerationService {
 
-    // Barvy
-    private static final float[] PRIMARY_COLOR = {0.2f, 0.4f, 0.7f}; // Modrá
-    private static final float[] ACCENT_COLOR = {0.95f, 0.6f, 0.2f}; // Oranžová
-    private static final float[] LIGHT_BG = {0.97f, 0.97f, 0.98f}; // Světle šedá
-    private static final float[] BORDER_COLOR = {0.85f, 0.85f, 0.87f}; // Světle šedá bordura
-    private static final float[] TEXT_DARK = {0.2f, 0.2f, 0.2f}; // Tmavě šedá
-    private static final float[] TEXT_LIGHT = {0.5f, 0.5f, 0.5f}; // Světle šedá text
+    private static final float[] PRIMARY_COLOR = {0.008f, 0.482f, 1.0f};
+    private static final float[] HEADER_BG = {0.94f, 0.94f, 0.94f};
+    private static final float[] TEXT_DARK = {0.12f, 0.12f, 0.12f};
+    private static final float[] TEXT_LIGHT = {0.4f, 0.4f, 0.4f};
+    private static final float[] BORDER_COLOR = {0.9f, 0.9f, 0.9f};
 
-    private PDType0Font fontRegular;
-    private PDType0Font fontBold;
-    private PDPageContentStream contentStream;
-    private PDDocument document;
-    private float yPosition;
-    private final float pageTop = 750;
-    private final float pageMargin = 50;
-    private final float pageWidth = 595 - 2 * pageMargin;
-    private final float pageHeight = 842;
+    private final float pageMargin = 40;
 
-    public byte[] generateRegistrationPdf(Registration reg) throws IOException {
-        try (PDDocument doc = new PDDocument()) {
-            this.document = doc;
-            PDPage page = new PDPage(PDRectangle.A4);
+    public byte[] createJudgingSheetsPdf(List<JudgingSheet> sheets) throws IOException {
+        try (PDDocument document = new PDDocument()) {
+            PDType0Font fontRegular = loadFont(document, "/fonts/DejaVuSans.ttf");
+            PDType0Font fontBold = loadFont(document, "/fonts/DejaVuSans-Bold.ttf");
+
+            PDPage page = new PDPage(new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth()));
             document.addPage(page);
 
-            loadFonts(document);
-            contentStream = new PDPageContentStream(document, page);
-            yPosition = pageTop;
+            float totalPageWidth = 842 - 2 * pageMargin;
 
-            // Hlavička s barevným páskem
-            drawHeader();
+            try (PDPageContentStream cs = new PDPageContentStream(document, page)) {
+                float y = 530;
 
-            // Hlavní nadpis
-            addMainTitle("Potvrzení o přihlášení");
-            addSubtitle("Výstava koček");
-            yPosition -= 15;
+                if (!sheets.isEmpty()) {
+                    Show show = sheets.get(0).getShow();
+                    cs.beginText();
+                    cs.setFont(fontBold, 24);
+                    cs.setNonStrokingColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2]);
+                    cs.newLineAtOffset(pageMargin, y);
+                    cs.showText("Nominations - " + show.getName());
+                    cs.endText();
 
-            // Info box s číslem registrace
-            drawInfoBox(reg);
-            yPosition -= 20;
+                    cs.beginText();
+                    cs.setFont(fontRegular, 10);
+                    cs.setNonStrokingColor(TEXT_LIGHT[0], TEXT_LIGHT[1], TEXT_LIGHT[2]);
+                    cs.newLineAtOffset(pageMargin, y - 15);
+                    cs.showText("FP – Poznań — " + sheets.get(0).getDay());
+                    cs.endText();
+                    y -= 60;
+                }
 
-            addModernSection("Informace o registraci", PRIMARY_COLOR);
-            addInfoRow("Číslo přihlášky", reg.getRegistrationNumber(), true);
-            addInfoRow("Výstava", reg.getShow().getName(), false);
-            addInfoRow("Datum odeslání", reg.getCreatedAt().format(DateTimeFormatter.ofPattern("d. M. yyyy HH:mm")), false);
-            addInfoRow("Stav", translateStatus(reg.getStatus().name()), false);
-            addInfoRow("Dny účasti", reg.getDays().toUpperCase(), false);
-            yPosition -= 25;
+                float classColWidth = 150;
+                List<Judge> judges = sheets.stream()
+                        .map(JudgingSheet::getJudge)
+                        .distinct()
+                        .collect(Collectors.toList());
 
-            addModernSection("Majitel", PRIMARY_COLOR);
-            Owner owner = reg.getOwner();
-            addInfoRow("Jméno a příjmení", owner.getFirstName() + " " + owner.getLastName(), true);
-            addInfoRow("Adresa", owner.getAddress() + ", " + owner.getZip() + " " + owner.getCity(), false);
-            addInfoRow("E-mail", owner.getEmail(), false);
-            addInfoRow("Telefon", owner.getPhone(), false);
+                float judgeColWidth = (totalPageWidth - classColWidth) / Math.max(1, judges.size());
+                float rowHeight = 45;
 
-            String org = owner.getOwnerLocalOrganization() != null && !owner.getOwnerLocalOrganization().isEmpty()
-                    ? owner.getOwnerLocalOrganization() : "—";
-            String member = owner.getOwnerMembershipNumber() != null && !owner.getOwnerMembershipNumber().isEmpty()
-                    ? owner.getOwnerMembershipNumber() : "—";
-            addInfoRow("Organizace", org, false);
-            addInfoRow("Členské číslo", member, false);
-            yPosition -= 25;
+                drawRect(cs, HEADER_BG, pageMargin, y, classColWidth, rowHeight);
+                drawText(cs, fontBold, 11, TEXT_DARK, pageMargin + 10, y + (rowHeight / 2) - 4, "Class");
 
-            Breeder breeder = reg.getBreeder();
-            if (breeder != null && !Objects.equals(breeder.getEmail(), owner.getEmail())) {
-                addModernSection("Chovatel", PRIMARY_COLOR);
-                addInfoRow("Jméno a příjmení", breeder.getFirstName() + " " + breeder.getLastName(), true);
-                addInfoRow("E-mail", breeder.getEmail(), false);
-                yPosition -= 25;
-            }
+                float currentX = pageMargin + classColWidth;
+                for (Judge judge : judges) {
+                    drawRect(cs, PRIMARY_COLOR, currentX, y, judgeColWidth, rowHeight);
+                    String judgeDisplayName = judge.getLastName();
+                    drawCenteredText(cs, fontBold, 10, new float[]{1, 1, 1}, currentX, y + (rowHeight / 2) - 4, judgeColWidth, judgeDisplayName);
+                    currentX += judgeColWidth;
+                }
 
-            int entriesCount = reg.getEntries() != null ? reg.getEntries().size() : 0;
-            addModernSection("Registrované kočky (" + entriesCount + ")", ACCENT_COLOR);
-            yPosition -= 5;
+                y -= rowHeight;
 
-            int catCount = 0;
-            if (reg.getEntries() != null) {
-                for (RegistrationEntry entry : reg.getEntries()) {
-                    if (catCount > 0) {
-                        yPosition -= 10;
+                var sheetsByClass = sheets.stream()
+                        .collect(Collectors.groupingBy(s -> s.getCatEntry().getShowClass()));
+
+                for (var entryClass : sheetsByClass.entrySet()) {
+                    drawRect(cs, new float[]{0.98f, 0.98f, 0.98f}, pageMargin, y, classColWidth, rowHeight);
+                    drawText(cs, fontBold, 10, TEXT_DARK, pageMargin + 10, y + (rowHeight / 2) - 4, String.valueOf(entryClass.getKey()));
+
+                    currentX = pageMargin + classColWidth;
+                    for (Judge judge : judges) {
+                        cs.setStrokingColor(BORDER_COLOR[0], BORDER_COLOR[1], BORDER_COLOR[2]);
+                        cs.addRect(currentX, y, judgeColWidth, rowHeight);
+                        cs.stroke();
+
+                        JudgingSheet cellSheet = entryClass.getValue().stream()
+                                .filter(s -> s.getJudge().getId().equals(judge.getId()))
+                                .findFirst().orElse(null);
+
+                        if (cellSheet != null) {
+                            drawCenteredText(cs, fontBold, 12, TEXT_DARK, currentX, y + (rowHeight / 2) + 2, judgeColWidth, String.valueOf(cellSheet.getCatalogNumber()));
+                            drawCenteredText(cs, fontRegular, 8, TEXT_LIGHT, currentX, y + (rowHeight / 2) - 10, judgeColWidth, cellSheet.getCatEntry().getCat().getEmsCode());
+                        } else {
+                            drawCenteredText(cs, fontRegular, 10, TEXT_LIGHT, currentX, y + (rowHeight / 2) - 4, judgeColWidth, "–");
+                        }
+                        currentX += judgeColWidth;
                     }
-                    drawCatCard(entry, catCount + 1); // Posíláme entry
-                    catCount++;
+                    y -= rowHeight;
+                    if (y < 50) break;
                 }
             }
-
-            drawFooter();
-
-            contentStream.close();
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             document.save(baos);
@@ -113,241 +116,77 @@ public class PdfGenerationService {
         }
     }
 
-    private void loadFonts(PDDocument document) throws IOException {
-        try (InputStream fontStreamRegular = getClass().getResourceAsStream("/fonts/DejaVuSans.ttf");
-             InputStream fontStreamBold = getClass().getResourceAsStream("/fonts/DejaVuSans-Bold.ttf")) {
+    private void drawRect(PDPageContentStream cs, float[] color, float x, float y, float w, float h) throws IOException {
+        cs.setNonStrokingColor(color[0], color[1], color[2]);
+        cs.addRect(x, y, w, h);
+        cs.fill();
+    }
 
-            if (fontStreamRegular == null || fontStreamBold == null) {
-                throw new IOException("Soubory s fonty (DejaVuSans.ttf, DejaVuSans-Bold.ttf) nebyly nalezeny v resources/fonts/");
+    private void drawText(PDPageContentStream cs, PDType0Font font, float size, float[] color, float x, float y, String text) throws IOException {
+        cs.beginText();
+        cs.setFont(font, size);
+        cs.setNonStrokingColor(color[0], color[1], color[2]);
+        cs.newLineAtOffset(x, y);
+        cs.showText(text);
+        cs.endText();
+    }
+
+    private void drawCenteredText(PDPageContentStream cs, PDType0Font font, float size, float[] color, float x, float y, float width, String text) throws IOException {
+        float stringWidth = font.getStringWidth(text) * size / 1000f;
+        float startX = x + (width - stringWidth) / 2;
+        drawText(cs, font, size, color, startX, y, text);
+    }
+
+    public byte[] generateRegistrationPdf(Registration reg) throws IOException {
+        try (PDDocument document = new PDDocument()) {
+            PDType0Font fontRegular = loadFont(document, "/fonts/DejaVuSans.ttf");
+            PDType0Font fontBold = loadFont(document, "/fonts/DejaVuSans-Bold.ttf");
+            PDPage page = new PDPage(PDRectangle.A4);
+            document.addPage(page);
+            try (PDPageContentStream cs = new PDPageContentStream(document, page)) {
+                float currentY = 750;
+                cs.setNonStrokingColor(PRIMARY_COLOR[0], PRIMARY_COLOR[1], PRIMARY_COLOR[2]);
+                cs.addRect(0, 842 - 60, 595, 60);
+                cs.fill();
+                cs.setNonStrokingColor(1f, 1f, 1f);
+                cs.beginText();
+                cs.setFont(fontBold, 24);
+                cs.newLineAtOffset(50, 802);
+                cs.showText("CatShow");
+                cs.endText();
+                currentY -= 40;
+                cs.setNonStrokingColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2]);
+                cs.beginText();
+                cs.setFont(fontBold, 22);
+                cs.newLineAtOffset(50, currentY);
+                cs.showText("Potvrzení o přihlášení");
+                cs.endText();
+                currentY -= 60;
+                cs.beginText();
+                cs.setFont(fontBold, 14);
+                cs.newLineAtOffset(50, currentY);
+                cs.showText("Registrační číslo: " + reg.getRegistrationNumber());
+                cs.endText();
             }
-            fontRegular = PDType0Font.load(document, fontStreamRegular);
-            fontBold = PDType0Font.load(document, fontStreamBold);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            document.save(baos);
+            return baos.toByteArray();
         }
     }
 
-    private void drawHeader() throws IOException {
-        contentStream.setNonStrokingColor(PRIMARY_COLOR[0], PRIMARY_COLOR[1], PRIMARY_COLOR[2]);
-        contentStream.addRect(0, pageHeight - 60, 595, 60);
-        contentStream.fill();
-
-        contentStream.setNonStrokingColor(1f, 1f, 1f);
-        contentStream.beginText();
-        contentStream.setFont(fontBold, 24);
-        contentStream.newLineAtOffset(pageMargin, pageHeight - 40);
-        contentStream.showText("CatShow");
-        contentStream.endText();
-
-        contentStream.setNonStrokingColor(ACCENT_COLOR[0], ACCENT_COLOR[1], ACCENT_COLOR[2]);
-        contentStream.addRect(pageMargin, pageHeight - 48, 80, 3);
-        contentStream.fill();
-
-        contentStream.setNonStrokingColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2]);
-        yPosition = pageTop - 40;
-    }
-
-    private void addMainTitle(String text) throws IOException {
-        contentStream.beginText();
-        contentStream.setFont(fontBold, 22);
-        contentStream.newLineAtOffset(pageMargin, yPosition);
-        contentStream.showText(text);
-        contentStream.endText();
-        yPosition -= 28;
-    }
-
-    private void addSubtitle(String text) throws IOException {
-        contentStream.setNonStrokingColor(TEXT_LIGHT[0], TEXT_LIGHT[1], TEXT_LIGHT[2]);
-        contentStream.beginText();
-        contentStream.setFont(fontRegular, 12);
-        contentStream.newLineAtOffset(pageMargin, yPosition);
-        contentStream.showText(text);
-        contentStream.endText();
-        contentStream.setNonStrokingColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2]);
-        yPosition -= 20;
-    }
-
-    private void drawInfoBox(Registration reg) throws IOException {
-        float boxHeight = 50;
-        float boxY = yPosition - boxHeight;
-
-        contentStream.setNonStrokingColor(LIGHT_BG[0], LIGHT_BG[1], LIGHT_BG[2]);
-        contentStream.addRect(pageMargin, boxY, pageWidth, boxHeight);
-        contentStream.fill();
-
-        contentStream.setStrokingColor(BORDER_COLOR[0], BORDER_COLOR[1], BORDER_COLOR[2]);
-        contentStream.setLineWidth(1f);
-        contentStream.addRect(pageMargin, boxY, pageWidth, boxHeight);
-        contentStream.stroke();
-
-        contentStream.setNonStrokingColor(PRIMARY_COLOR[0], PRIMARY_COLOR[1], PRIMARY_COLOR[2]);
-        contentStream.addRect(pageMargin, boxY, 4, boxHeight);
-        contentStream.fill();
-
-        contentStream.setNonStrokingColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2]);
-        contentStream.beginText();
-        contentStream.setFont(fontBold, 11);
-        contentStream.newLineAtOffset(pageMargin + 15, boxY + 30);
-        contentStream.showText("Registrační číslo");
-        contentStream.endText();
-
-        contentStream.beginText();
-        contentStream.setFont(fontBold, 16);
-        contentStream.newLineAtOffset(pageMargin + 15, boxY + 12);
-        contentStream.showText(reg.getRegistrationNumber());
-        contentStream.endText();
-
-        String dateStr = reg.getCreatedAt().format(DateTimeFormatter.ofPattern("d. M. yyyy"));
-        contentStream.setNonStrokingColor(TEXT_LIGHT[0], TEXT_LIGHT[1], TEXT_LIGHT[2]);
-        contentStream.beginText();
-        contentStream.setFont(fontRegular, 10);
-        float dateWidth = (fontRegular.getStringWidth(dateStr) / 1000f) * 10;
-        contentStream.newLineAtOffset(pageMargin + pageWidth - dateWidth - 15, boxY + 25);
-        contentStream.showText(dateStr);
-        contentStream.endText();
-
-        contentStream.setNonStrokingColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2]);
-        yPosition = boxY - 10;
-    }
-
-    private void addModernSection(String title, float[] color) throws IOException {
-        contentStream.setNonStrokingColor(color[0], color[1], color[2]);
-        contentStream.addRect(pageMargin, yPosition - 18, 3, 20);
-        contentStream.fill();
-
-        contentStream.setNonStrokingColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2]);
-        contentStream.beginText();
-        contentStream.setFont(fontBold, 14);
-        contentStream.newLineAtOffset(pageMargin + 10, yPosition);
-        contentStream.showText(title);
-        contentStream.endText();
-        yPosition -= 25;
-    }
-
-    private void addInfoRow(String label, String value, boolean isFirst) throws IOException {
-        if (!isFirst) {
-            yPosition -= 14;
+    private PDType0Font loadFont(PDDocument doc, String path) throws IOException {
+        try (InputStream is = getClass().getResourceAsStream(path)) {
+            if (is == null) throw new IOException("Font not found: " + path);
+            return PDType0Font.load(doc, is);
         }
-
-        contentStream.setNonStrokingColor(TEXT_LIGHT[0], TEXT_LIGHT[1], TEXT_LIGHT[2]);
-        contentStream.beginText();
-        contentStream.setFont(fontRegular, 9);
-        contentStream.newLineAtOffset(pageMargin + 10, yPosition);
-        contentStream.showText(label.toUpperCase());
-        contentStream.endText();
-
-        contentStream.setNonStrokingColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2]);
-        contentStream.beginText();
-        contentStream.setFont(fontRegular, 11);
-        contentStream.newLineAtOffset(pageMargin + 10, yPosition - 12);
-        contentStream.showText(Objects.requireNonNullElse(value, "—"));
-        contentStream.endText();
-
-        yPosition -= 12;
     }
 
-    private void drawCatCard(RegistrationEntry entry, int number) throws IOException {
-        Cat cat = entry.getCat();
-
-        float cardHeight = 140;
-        float cardY = yPosition - cardHeight;
-
-        if (cardY < 100) {
-            contentStream.close();
-            PDPage newPage = new PDPage(PDRectangle.A4);
-            document.addPage(newPage);
-            contentStream = new PDPageContentStream(document, newPage);
-            yPosition = pageTop;
-            cardY = yPosition - cardHeight;
-        }
-
-        contentStream.setNonStrokingColor(1f, 1f, 1f);
-        contentStream.addRect(pageMargin, cardY, pageWidth, cardHeight);
-        contentStream.fill();
-
-        contentStream.setStrokingColor(BORDER_COLOR[0], BORDER_COLOR[1], BORDER_COLOR[2]);
-        contentStream.setLineWidth(1f);
-        contentStream.addRect(pageMargin, cardY, pageWidth, cardHeight);
-        contentStream.stroke();
-
-        contentStream.setNonStrokingColor(ACCENT_COLOR[0], ACCENT_COLOR[1], ACCENT_COLOR[2]);
-        contentStream.beginText();
-        contentStream.setFont(fontBold, 11);
-        contentStream.newLineAtOffset(pageMargin + 10, cardY + cardHeight - 18);
-        contentStream.showText("KOČKA #" + number);
-        contentStream.endText();
-
-        String catName = (cat.getTitleBefore() != null && !cat.getTitleBefore().isEmpty() ? cat.getTitleBefore() + " " : "") +
-                cat.getCatName() +
-                (cat.getTitleAfter() != null && !cat.getTitleAfter().isEmpty() ? " " + cat.getTitleAfter() : "");
-
-        contentStream.setNonStrokingColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2]);
-        contentStream.beginText();
-        contentStream.setFont(fontBold, 14);
-        contentStream.newLineAtOffset(pageMargin + 10, cardY + cardHeight - 36);
-        contentStream.showText(catName.trim());
-        contentStream.endText();
-
-        contentStream.setStrokingColor(BORDER_COLOR[0], BORDER_COLOR[1], BORDER_COLOR[2]);
-        contentStream.setLineWidth(0.5f);
-        contentStream.moveTo(pageMargin + 10, cardY + cardHeight - 45);
-        contentStream.lineTo(pageMargin + pageWidth - 10, cardY + cardHeight - 45);
-        contentStream.stroke();
-
-        float detailY = cardY + cardHeight - 65;
-        float col1X = pageMargin + 10;
-        float col2X = pageMargin + pageWidth / 2 + 5;
-
-        addCardDetail("EMS kód", cat.getEmsCode(), col1X, detailY);
-        addCardDetail("Datum narození", cat.getBirthDate(), col1X, detailY - 25);
-
-        addCardDetail("Třída", translateClass(entry.getShowClass().name()), col1X, detailY - 50);
-
-        addCardDetail("Matka", cat.getMotherName() != null && !cat.getMotherName().isEmpty() ? cat.getMotherName() : "—", col1X, detailY - 75);
-
-        addCardDetail("Pohlaví", translateGender(cat.getGender().name()), col2X, detailY);
-
-        addCardDetail("Kastrovaná", translateNeutered(entry.isNeutered()), col2X, detailY - 25);
-        addCardDetail("Typ klece", translateCageType(entry.getCageType().name()), col2X, detailY - 50);
-
-        addCardDetail("Otec", cat.getFatherName() != null && !cat.getFatherName().isEmpty() ? cat.getFatherName() : "—", col2X, detailY - 75);
-
-        yPosition = cardY - 15;
-    }
-
-    private void addCardDetail(String label, String value, float x, float y) throws IOException {
-        contentStream.setNonStrokingColor(TEXT_LIGHT[0], TEXT_LIGHT[1], TEXT_LIGHT[2]);
-        contentStream.beginText();
-        contentStream.setFont(fontRegular, 8);
-        contentStream.newLineAtOffset(x, y);
-        contentStream.showText(label.toUpperCase());
-        contentStream.endText();
-
-        contentStream.setNonStrokingColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2]);
-        contentStream.beginText();
-        contentStream.setFont(fontRegular, 10);
-        contentStream.newLineAtOffset(x, y - 12);
-        contentStream.showText(value);
-        contentStream.endText();
-    }
-
-    private void drawFooter() throws IOException {
-        float footerY = 40;
-
-        contentStream.setStrokingColor(BORDER_COLOR[0], BORDER_COLOR[1], BORDER_COLOR[2]);
-        contentStream.setLineWidth(0.5f);
-        contentStream.moveTo(pageMargin, footerY + 20);
-        contentStream.lineTo(pageMargin + pageWidth, footerY + 20);
-        contentStream.stroke();
-
-        contentStream.setNonStrokingColor(TEXT_LIGHT[0], TEXT_LIGHT[1], TEXT_LIGHT[2]);
-        String footerText = "Dokument vygenerován automaticky systémem CatShow";
-        float textWidth = (fontRegular.getStringWidth(footerText) / 1000f) * 9;
-        contentStream.beginText();
-        contentStream.setFont(fontRegular, 9);
-        contentStream.newLineAtOffset((595 - textWidth) / 2, footerY);
-        contentStream.showText(footerText);
-        contentStream.endText();
-
-        contentStream.setNonStrokingColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2]);
+    private String translateGender(String gender) {
+        return switch (gender) {
+            case "MALE" -> "Kocour / Male";
+            case "FEMALE" -> "Kočka / Female";
+            default -> gender;
+        };
     }
 
     private String translateStatus(String status) {
@@ -356,33 +195,6 @@ public class PdfGenerationService {
             case "CONFIRMED" -> "Potvrzeno";
             case "CANCELLED" -> "Zrušeno";
             default -> status;
-        };
-    }
-
-    private String translateGender(String gender) {
-        return switch (gender) {
-            case "MALE" -> "Kocour";
-            case "FEMALE" -> "Kočka";
-            default -> gender;
-        };
-    }
-
-    private String translateNeutered(boolean isNeutered) {
-        return isNeutered ? "Ano" : "Ne";
-    }
-
-    private String translateClass(String showClass) {
-        return showClass;
-    }
-
-    private String translateCageType(String cageType) {
-        return switch (cageType) {
-            case "OWN_CAGE" -> "Vlastní klec";
-            case "RENT_SMALL" -> "Pronájem - Malá";
-            case "RENT_LARGE" -> "Pronájem - Velká";
-            case "SINGLE" -> "Jednoduchá";
-            case "DOUBLE" -> "Dvojitá";
-            default -> cageType;
         };
     }
 }

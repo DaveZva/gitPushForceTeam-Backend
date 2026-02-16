@@ -51,6 +51,8 @@ logging:
   level:
     root: INFO
     com.example.catshow: DEBUG
+    com.gpfteam.catshow.catshow_backend: DEBUG
+    #org.hibernate.SQL: DEBUG
 
 jwt:
   secret: ${JWT_SECRET_KEY}

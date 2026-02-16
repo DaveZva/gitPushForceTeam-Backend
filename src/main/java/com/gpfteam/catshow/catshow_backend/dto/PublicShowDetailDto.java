@@ -15,6 +15,7 @@ public class PublicShowDetailDto {
     private String venueCity;
     private String organizerName;
     private String organizerWebsiteUrl;
+    private String organizerContactEmail;
 
     private LocalDateTime startDate;
     private LocalDateTime endDate;

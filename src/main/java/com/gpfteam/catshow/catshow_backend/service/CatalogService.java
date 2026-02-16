@@ -135,6 +135,7 @@ public class CatalogService {
                     .catName(fullName.trim())
                     .gender(c.getGender().name())
                     .emsCode(c.getEmsCode())
+                    .birthDate(c.getBirthDate())
                     .group(c.getCatGroup())
                     .showClass(e.getShowClass() != null ? e.getShowClass().name() : "")
                     .category(EmsUtility.getCategory(c.getEmsCode()))

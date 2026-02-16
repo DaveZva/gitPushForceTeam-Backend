@@ -5,22 +5,27 @@ import com.gpfteam.catshow.catshow_backend.dto.JudgeWorkloadDto;
 import com.gpfteam.catshow.catshow_backend.dto.JudgingSheetDto;
 import com.gpfteam.catshow.catshow_backend.model.*;
 import com.gpfteam.catshow.catshow_backend.repository.*;
+import com.gpfteam.catshow.catshow_backend.service.PdfGenerationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class JudgingSheetService {
 
     private final JudgingSheetRepository judgingSheetRepository;
     private final JudgeAssignmentService judgeAssignmentService;
     private final ShowRepository showRepository;
     private final JudgeRepository judgeRepository;
+    private final PdfGenerationService pdfGenerationService;
 
     @Transactional
     public void generateJudgingSheetsForShow(Long showId) {
@@ -35,10 +40,13 @@ public class JudgingSheetService {
 
     @Transactional
     public void generateForDay(Long showId, String day) {
+        log.info("Mažu staré posuzovací listy pro showId: {}, den: {}", showId, day);
         judgingSheetRepository.deleteByShowIdAndDay(showId, day);
 
         Map<Long, List<RegistrationEntry>> distribution =
                 judgeAssignmentService.distributeWorkloadEvenly(showId, day);
+
+        log.info("Distribuce dokončena. Počet posuzovatelů s přiřazenou prací: {}", distribution.size());
 
         if (distribution.isEmpty()) {
             return;
@@ -47,6 +55,7 @@ public class JudgingSheetService {
         Show show = showRepository.findById(showId).orElseThrow();
 
         for (Map.Entry<Long, List<RegistrationEntry>> entry : distribution.entrySet()) {
+            log.info("Ukládám {} listů pro posuzovatele ID: {}", entry.getValue().size(), entry.getKey());
             Judge judge = judgeRepository.findById(entry.getKey()).orElseThrow();
 
             for (RegistrationEntry catEntry : entry.getValue()) {
@@ -168,5 +177,14 @@ public class JudgingSheetService {
                 Map.entry("BLH", "British Longhair")
         );
         return breedNames.getOrDefault(code, code);
+    }
+
+    public byte[] generatePdfForJudge(Long showId, Long judgeId, String day) throws IOException {
+        List<JudgingSheet> sheets = judgingSheetRepository.findByShowIdAndJudgeIdAndDay(showId, judgeId, day);
+        if (sheets.isEmpty()) {
+            throw new RuntimeException("No judging sheets found for judge " + judgeId + " on " + day);
+        }
+
+        return pdfGenerationService.createJudgingSheetsPdf(sheets);
     }
 }
