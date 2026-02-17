@@ -1,5 +1,6 @@
 package com.gpfteam.catshow.catshow_backend.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -29,6 +30,7 @@ public class RegistrationEntry {
     @Enumerated(EnumType.STRING)
     private ShowClass showClass;
 
+
     @Enumerated(EnumType.STRING)
     private CageType cageType;
 
@@ -38,6 +40,22 @@ public class RegistrationEntry {
 
     public enum CageType {
         OWN_CAGE, RENT_SMALL, RENT_LARGE
+    }
+
+    @JsonProperty("showClassCode")
+    public String getShowClassCode() {
+        if (showClass == null) {
+            return null;
+        }
+        return showClass.getFifeCode();
+    }
+
+    @JsonProperty("showClassSortOrder")
+    public Integer getShowClassSortOrder() {
+        if (showClass == null) {
+            return null;
+        }
+        return showClass.getSortOrder();
     }
 
     public enum ShowClass {

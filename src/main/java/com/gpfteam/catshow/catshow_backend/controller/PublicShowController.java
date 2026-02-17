@@ -103,6 +103,7 @@ public class PublicShowController {
                 .category(EmsUtility.getCategory(cat.getEmsCode()))
                 .color(emsCode)
                 .className(entry.getShowClass() != null ? entry.getShowClass().name() : "")
+                .showClassCode(Integer.parseInt(entry.getShowClassCode()))
                 .group(cat.getCatGroup())
                 .build();
     }

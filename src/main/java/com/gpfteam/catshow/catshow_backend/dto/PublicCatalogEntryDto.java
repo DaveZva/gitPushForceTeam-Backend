@@ -23,6 +23,7 @@ public class PublicCatalogEntryDto {
     private String breederCountry;
     private String color;
     private String className;
+    private Integer showClassCode;
     private Integer classSortOrder;
     private String group;
 }
