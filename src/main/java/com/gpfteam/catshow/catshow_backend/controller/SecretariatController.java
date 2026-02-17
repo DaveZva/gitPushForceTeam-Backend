@@ -30,7 +30,7 @@ public class SecretariatController {
     private final UserRepository userRepository;
     private final JudgeRepository judgeRepository;
     private final RegistrationEntryRepository registrationEntryRepository;
-    private final CatRepository catRepository; // Přidáno pro ukládání změn kočky
+    private final CatRepository catRepository;
     private final PaymentService paymentService;
 
     @GetMapping
@@ -148,6 +148,8 @@ public class SecretariatController {
                 .pedigreeNumber(cat.getPedigreeNumber())
                 .chipNumber(cat.getChipNumber())
                 .showClass(entry.getShowClass() != null ? entry.getShowClass().name() : "")
+                .showClassCode(entry.getShowClass() != null ? entry.getShowClass().getFifeCode() : "")
+                .neutered(entry.isNeutered())
                 .catalogNumber(entry.getCatalogNumber() != null ? entry.getCatalogNumber().toString() : "")
                 .build());
     }
