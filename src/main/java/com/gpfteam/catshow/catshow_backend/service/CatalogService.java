@@ -79,27 +79,7 @@ public class CatalogService {
     }
 
     private int getClassRank(RegistrationEntry.ShowClass showClass) {
-        if (showClass == null) return 99;
-        return switch (showClass) {
-            case SUPREME_CHAMPION -> 1;
-            case SUPREME_PREMIOR -> 2;
-            case GRANT_INTER_CHAMPION -> 3;
-            case GRANT_INTER_PREMIER -> 4;
-            case INTERNATIONAL_CHAMPION -> 5;
-            case INTERNATIONAL_PREMIER -> 6;
-            case CHAMPION -> 7;
-            case PREMIER -> 8;
-            case OPEN -> 9;
-            case NEUTER -> 10;
-            case JUNIOR -> 11;
-            case KITTEN -> 12;
-            case NOVICE_CLASS -> 13;
-            case CONTROL_CLASS -> 14;
-            case LITTER -> 15;
-            case VETERAN -> 16;
-            case DOMESTIC_CAT -> 17;
-            default -> 50;
-        };
+        return showClass != null ? showClass.getSortOrder() : 99;
     }
 
     public List<QuickCatalogEntryDto> getQuickCatalog(Long showId) {
@@ -192,7 +172,8 @@ public class CatalogService {
                 .breed(EmsUtility.getBreedFromEms(c.getEmsCode()))
                 .category(EmsUtility.getCategory(c.getEmsCode()))
                 .color(c.getEmsCode())
-                .className(entry.getShowClass().name())
+                .className(entry.getShowClass() != null ? entry.getShowClass().name() : "")
+                .classSortOrder(entry.getShowClass() != null ? entry.getShowClass().getSortOrder() : 99)
                 .group(c.getCatGroup())
                 .build();
     }
