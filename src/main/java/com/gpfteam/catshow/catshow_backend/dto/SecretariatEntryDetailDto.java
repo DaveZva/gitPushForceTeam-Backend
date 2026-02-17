@@ -22,5 +22,8 @@ public class SecretariatEntryDetailDto {
     private String chipNumber;
 
     private String showClass;
+    private String showClassCode;
+    private Integer showClassSortOrder;
     private String catalogNumber;
+    private boolean neutered;
 }
