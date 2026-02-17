@@ -21,7 +21,7 @@ public class SecretariatShowDetailDto {
 
     // Organizátor
     private String organizerName;
-    private String organizerContactEmail;
+    private String contactEmail;
     private String organizerWebsiteUrl;
 
     private LocalDateTime startDate;

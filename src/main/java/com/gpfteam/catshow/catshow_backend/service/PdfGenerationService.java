@@ -11,10 +11,7 @@ import org.springframework.stereotype.Service;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 @Service
 public class PdfGenerationService {
@@ -23,11 +20,19 @@ public class PdfGenerationService {
     private static final float[] HEADER_BG = {0.94f, 0.94f, 0.94f};
     private static final float[] TEXT_DARK = {0.12f, 0.12f, 0.12f};
     private static final float[] TEXT_LIGHT = {0.4f, 0.4f, 0.4f};
-    private static final float[] BORDER_COLOR = {0.9f, 0.9f, 0.9f};
+    private static final float[] BORDER_COLOR = {0.85f, 0.85f, 0.85f};
 
-    private final float pageMargin = 40;
+    private final float pageMargin = 30;
 
     public byte[] createJudgingSheetsPdf(List<JudgingSheet> sheets) throws IOException {
+        if (sheets.isEmpty()) {
+            throw new IllegalArgumentException("No sheets to generate PDF");
+        }
+
+        Show show = sheets.get(0).getShow();
+        Judge judge = sheets.get(0).getJudge();
+        String day = sheets.get(0).getDay();
+
         try (PDDocument document = new PDDocument()) {
             PDType0Font fontRegular = loadFont(document, "/fonts/DejaVuSans.ttf");
             PDType0Font fontBold = loadFont(document, "/fonts/DejaVuSans-Bold.ttf");
@@ -35,80 +40,69 @@ public class PdfGenerationService {
             PDPage page = new PDPage(new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth()));
             document.addPage(page);
 
-            float totalPageWidth = 842 - 2 * pageMargin;
+            float pageWidth = page.getMediaBox().getWidth();
+            float pageHeight = page.getMediaBox().getHeight();
 
-            try (PDPageContentStream cs = new PDPageContentStream(document, page)) {
-                float y = 530;
+            PDPageContentStream cs = new PDPageContentStream(document, page);
+            float yPosition = pageHeight - pageMargin - 40;
 
-                if (!sheets.isEmpty()) {
-                    Show show = sheets.get(0).getShow();
-                    cs.beginText();
-                    cs.setFont(fontBold, 24);
-                    cs.setNonStrokingColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2]);
-                    cs.newLineAtOffset(pageMargin, y);
-                    cs.showText("Nominations - " + show.getName());
-                    cs.endText();
+            cs.setNonStrokingColor(PRIMARY_COLOR[0], PRIMARY_COLOR[1], PRIMARY_COLOR[2]);
+            cs.addRect(0, yPosition + 10, pageWidth, 40);
+            cs.fill();
 
-                    cs.beginText();
-                    cs.setFont(fontRegular, 10);
-                    cs.setNonStrokingColor(TEXT_LIGHT[0], TEXT_LIGHT[1], TEXT_LIGHT[2]);
-                    cs.newLineAtOffset(pageMargin, y - 15);
-                    cs.showText("FP – Poznań — " + sheets.get(0).getDay());
-                    cs.endText();
-                    y -= 60;
+            cs.beginText();
+            cs.setFont(fontBold, 18);
+            cs.setNonStrokingColor(1f, 1f, 1f);
+            cs.newLineAtOffset(pageMargin, yPosition + 22);
+            cs.showText(judge.getFirstName() + " " + judge.getLastName());
+            cs.endText();
+
+            cs.beginText();
+            cs.setFont(fontRegular, 10);
+            cs.newLineAtOffset(pageMargin, yPosition + 8);
+            cs.showText(day);
+            cs.endText();
+
+            yPosition -= 50;
+
+            float col1 = 35;
+            float col2 = 80;
+            float col3 = 35;
+            float col4 = 50;
+            float col5 = 65;
+            float col6 = 40;
+            float col7 = 40;
+            float col8 = 40;
+            float col9 = 40;
+            float col10 = 40;
+            float col11 = 40;
+            float col12 = 40;
+            float col13 = 40;
+            float col14 = 100;
+
+            String[] headers = {"No.", "EMS", "Sex", "Class", "Born", "Ad M", "Ad F", "Ne M", "Ne F", "11 M", "11 F", "12 M", "12 F", "Results"};
+            float[] colWidths = {col1, col2, col3, col4, col5, col6, col7, col8, col9, col10, col11, col12, col13, col14};
+
+            float rowHeight = 22;
+            drawTableHeader(cs, fontBold, headers, colWidths, yPosition, rowHeight);
+            yPosition -= rowHeight;
+
+            for (JudgingSheet sheet : sheets) {
+                if (yPosition < 60) {
+                    cs.close();
+                    page = new PDPage(new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth()));
+                    document.addPage(page);
+                    cs = new PDPageContentStream(document, page);
+                    yPosition = pageHeight - pageMargin;
+                    drawTableHeader(cs, fontBold, headers, colWidths, yPosition, rowHeight);
+                    yPosition -= rowHeight;
                 }
 
-                float classColWidth = 150;
-                List<Judge> judges = sheets.stream()
-                        .map(JudgingSheet::getJudge)
-                        .distinct()
-                        .collect(Collectors.toList());
-
-                float judgeColWidth = (totalPageWidth - classColWidth) / Math.max(1, judges.size());
-                float rowHeight = 45;
-
-                drawRect(cs, HEADER_BG, pageMargin, y, classColWidth, rowHeight);
-                drawText(cs, fontBold, 11, TEXT_DARK, pageMargin + 10, y + (rowHeight / 2) - 4, "Class");
-
-                float currentX = pageMargin + classColWidth;
-                for (Judge judge : judges) {
-                    drawRect(cs, PRIMARY_COLOR, currentX, y, judgeColWidth, rowHeight);
-                    String judgeDisplayName = judge.getLastName();
-                    drawCenteredText(cs, fontBold, 10, new float[]{1, 1, 1}, currentX, y + (rowHeight / 2) - 4, judgeColWidth, judgeDisplayName);
-                    currentX += judgeColWidth;
-                }
-
-                y -= rowHeight;
-
-                var sheetsByClass = sheets.stream()
-                        .collect(Collectors.groupingBy(s -> s.getCatEntry().getShowClass()));
-
-                for (var entryClass : sheetsByClass.entrySet()) {
-                    drawRect(cs, new float[]{0.98f, 0.98f, 0.98f}, pageMargin, y, classColWidth, rowHeight);
-                    drawText(cs, fontBold, 10, TEXT_DARK, pageMargin + 10, y + (rowHeight / 2) - 4, String.valueOf(entryClass.getKey()));
-
-                    currentX = pageMargin + classColWidth;
-                    for (Judge judge : judges) {
-                        cs.setStrokingColor(BORDER_COLOR[0], BORDER_COLOR[1], BORDER_COLOR[2]);
-                        cs.addRect(currentX, y, judgeColWidth, rowHeight);
-                        cs.stroke();
-
-                        JudgingSheet cellSheet = entryClass.getValue().stream()
-                                .filter(s -> s.getJudge().getId().equals(judge.getId()))
-                                .findFirst().orElse(null);
-
-                        if (cellSheet != null) {
-                            drawCenteredText(cs, fontBold, 12, TEXT_DARK, currentX, y + (rowHeight / 2) + 2, judgeColWidth, String.valueOf(cellSheet.getCatalogNumber()));
-                            drawCenteredText(cs, fontRegular, 8, TEXT_LIGHT, currentX, y + (rowHeight / 2) - 10, judgeColWidth, cellSheet.getCatEntry().getCat().getEmsCode());
-                        } else {
-                            drawCenteredText(cs, fontRegular, 10, TEXT_LIGHT, currentX, y + (rowHeight / 2) - 4, judgeColWidth, "–");
-                        }
-                        currentX += judgeColWidth;
-                    }
-                    y -= rowHeight;
-                    if (y < 50) break;
-                }
+                drawTableRow(cs, fontRegular, sheet, colWidths, yPosition, rowHeight);
+                yPosition -= rowHeight;
             }
+
+            cs.close();
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             document.save(baos);
@@ -116,25 +110,78 @@ public class PdfGenerationService {
         }
     }
 
-    private void drawRect(PDPageContentStream cs, float[] color, float x, float y, float w, float h) throws IOException {
-        cs.setNonStrokingColor(color[0], color[1], color[2]);
-        cs.addRect(x, y, w, h);
+    private void drawTableHeader(PDPageContentStream cs, PDType0Font font, String[] headers, float[] colWidths, float yPos, float rowHeight) throws IOException {
+        cs.setNonStrokingColor(PRIMARY_COLOR[0], PRIMARY_COLOR[1], PRIMARY_COLOR[2]);
+        float totalWidth = 0;
+        for (float w : colWidths) totalWidth += w;
+        cs.addRect(pageMargin, yPos, totalWidth, rowHeight);
         cs.fill();
+
+        cs.setNonStrokingColor(1f, 1f, 1f);
+        float xPos = pageMargin;
+
+        for (int i = 0; i < headers.length; i++) {
+            cs.beginText();
+            cs.setFont(font, 9);
+            cs.newLineAtOffset(xPos + 3, yPos + 7);
+            cs.showText(headers[i]);
+            cs.endText();
+            xPos += colWidths[i];
+        }
     }
 
-    private void drawText(PDPageContentStream cs, PDType0Font font, float size, float[] color, float x, float y, String text) throws IOException {
-        cs.beginText();
-        cs.setFont(font, size);
-        cs.setNonStrokingColor(color[0], color[1], color[2]);
-        cs.newLineAtOffset(x, y);
-        cs.showText(text);
-        cs.endText();
+    private void drawTableRow(PDPageContentStream cs, PDType0Font font, JudgingSheet sheet, float[] colWidths, float yPos, float rowHeight) throws IOException {
+        Cat cat = sheet.getCatEntry().getCat();
+
+        cs.setStrokingColor(BORDER_COLOR[0], BORDER_COLOR[1], BORDER_COLOR[2]);
+        cs.setLineWidth(0.5f);
+
+        float xPos = pageMargin;
+        float totalWidth = 0;
+        for (float w : colWidths) totalWidth += w;
+
+        cs.addRect(pageMargin, yPos, totalWidth, rowHeight);
+        cs.stroke();
+
+        xPos = pageMargin;
+        for (float width : colWidths) {
+            cs.moveTo(xPos, yPos);
+            cs.lineTo(xPos, yPos + rowHeight);
+            cs.stroke();
+            xPos += width;
+        }
+
+        xPos = pageMargin;
+        String[] rowData = {
+                String.valueOf(sheet.getCatalogNumber()),
+                cat.getEmsCode() != null ? cat.getEmsCode() : "",
+                cat.getGender() == Cat.Gender.MALE ? "0,1" : "1,0",
+                sheet.getCatEntry().getShowClass() != null ? getClassCode(sheet.getCatEntry().getShowClass()) : "",
+                cat.getBirthDate() != null ? cat.getBirthDate() : "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                sheet.getGrade() != null ? sheet.getGrade() : ""
+        };
+
+        cs.setNonStrokingColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2]);
+        for (int i = 0; i < rowData.length; i++) {
+            cs.beginText();
+            cs.setFont(font, 8);
+            cs.newLineAtOffset(xPos + 3, yPos + 7);
+            cs.showText(rowData[i]);
+            cs.endText();
+            xPos += colWidths[i];
+        }
     }
 
-    private void drawCenteredText(PDPageContentStream cs, PDType0Font font, float size, float[] color, float x, float y, float width, String text) throws IOException {
-        float stringWidth = font.getStringWidth(text) * size / 1000f;
-        float startX = x + (width - stringWidth) / 2;
-        drawText(cs, font, size, color, startX, y, text);
+    private String getClassCode(RegistrationEntry.ShowClass showClass) {
+        return showClass != null ? showClass.getFifeCode() : "";
     }
 
     public byte[] generateRegistrationPdf(Registration reg) throws IOException {
@@ -179,22 +226,5 @@ public class PdfGenerationService {
             if (is == null) throw new IOException("Font not found: " + path);
             return PDType0Font.load(doc, is);
         }
-    }
-
-    private String translateGender(String gender) {
-        return switch (gender) {
-            case "MALE" -> "Kocour / Male";
-            case "FEMALE" -> "Kočka / Female";
-            default -> gender;
-        };
-    }
-
-    private String translateStatus(String status) {
-        return switch (status) {
-            case "PENDING" -> "Čeká na zpracování";
-            case "CONFIRMED" -> "Potvrzeno";
-            case "CANCELLED" -> "Zrušeno";
-            default -> status;
-        };
     }
 }

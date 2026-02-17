@@ -89,7 +89,7 @@ public class SecretariatController {
                 .venueState(show.getVenueState())
                 .venueZip(show.getVenueZip())
                 .organizerName(show.getOrganizerName())
-                .organizerContactEmail(show.getOrganizerContactEmail())
+                .contactEmail(show.getOrganizerContactEmail())
                 .organizerWebsiteUrl(show.getOrganizerWebsiteUrl())
                 .startDate(show.getStartDate())
                 .endDate(show.getEndDate())

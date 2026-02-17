@@ -14,5 +14,7 @@ public class QuickCatalogEntryDto {
     private String breed;
     private Integer category;
     private String showClass;
+    private Integer showClassCode;
+    private Integer classSortOrder;
     private String group;
 }
