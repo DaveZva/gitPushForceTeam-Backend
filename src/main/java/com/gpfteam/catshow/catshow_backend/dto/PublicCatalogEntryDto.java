@@ -8,6 +8,7 @@ import lombok.Data;
 public class PublicCatalogEntryDto {
     private Long id;
     private int entryNumber;
+    private Integer catalogNumber;
     private String name;
     private String ems;
     private String breed;
@@ -23,7 +24,7 @@ public class PublicCatalogEntryDto {
     private String breederCountry;
     private String color;
     private String className;
-    private Integer showClassCode;
+    private String showClassCode;
     private Integer classSortOrder;
     private String group;
 }

@@ -51,8 +51,22 @@ public class CatalogService {
 
         entries.sort(Comparator
                 .comparingInt((RegistrationEntry e) -> EmsUtility.getCategory(e.getCat().getEmsCode()))
-                .thenComparing((RegistrationEntry e) -> e.getCat().getEmsCode().split(" ")[0])
-                .thenComparing((RegistrationEntry e) -> e.getCat().getCatGroup(), Comparator.nullsFirst(Comparator.naturalOrder()))
+
+                .thenComparing((RegistrationEntry e) -> {
+                    String ems = e.getCat().getEmsCode();
+                    return (ems != null && !ems.isEmpty()) ? ems.split(" ")[0] : "ZZZ";
+                })
+
+                .thenComparingInt((RegistrationEntry e) -> {
+                    String g = e.getCat().getCatGroup();
+                    if (g == null || g.isEmpty()) return 0;
+                    try {
+                        return Integer.parseInt(g);
+                    } catch (NumberFormatException ex) {
+                        return 999;
+                    }
+                })
+                .thenComparing((RegistrationEntry e) -> e.getCat().getEmsCode())
                 .thenComparingInt(e -> getClassRank(e.getShowClass()))
                 .thenComparing(e -> e.getCat().getGender())
                 .thenComparing(e -> e.getCat().getCatName())
