@@ -1,6 +1,7 @@
 package com.gpfteam.catshow.catshow_backend.service;
 
 import com.gpfteam.catshow.catshow_backend.model.*;
+import com.gpfteam.catshow.catshow_backend.model.enums.RegistrationStatus;
 import com.gpfteam.catshow.catshow_backend.repository.*;
 import com.gpfteam.catshow.catshow_backend.util.EmsUtility;
 import lombok.RequiredArgsConstructor;
@@ -40,7 +41,7 @@ public class JudgeAssignmentService {
                     Registration reg = e.getRegistration();
                     if (reg == null) return false;
 
-                    boolean isConfirmed = reg.getStatus() == Registration.RegistrationStatus.CONFIRMED;
+                    boolean isConfirmed = reg.getStatus() == RegistrationStatus.CONFIRMED;
 
                     String regDays = reg.getDays() != null ? reg.getDays().toUpperCase() : "";
                     boolean dayMatches = regDays.contains(day.toUpperCase()) || regDays.contains("BOTH");

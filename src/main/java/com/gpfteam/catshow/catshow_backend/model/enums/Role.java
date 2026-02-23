@@ -1,4 +1,4 @@
-package com.gpfteam.catshow.catshow_backend.model;
+package com.gpfteam.catshow.catshow_backend.model.enums;
 
 public enum Role {
     USER,

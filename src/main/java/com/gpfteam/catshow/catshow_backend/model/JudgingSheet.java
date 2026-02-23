@@ -1,5 +1,6 @@
 package com.gpfteam.catshow.catshow_backend.model;
 
+import com.gpfteam.catshow.catshow_backend.model.enums.JudgingStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -42,10 +43,4 @@ public class JudgingSheet {
     private String grade;
     private String notes;
     private Boolean nominated;
-
-    public enum JudgingStatus {
-        PENDING,
-        IN_PROGRESS,
-        COMPLETED
-    }
 }

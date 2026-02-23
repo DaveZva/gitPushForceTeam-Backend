@@ -7,6 +7,7 @@ import com.gpfteam.catshow.catshow_backend.model.Cat;
 import com.gpfteam.catshow.catshow_backend.model.Registration;
 import com.gpfteam.catshow.catshow_backend.model.RegistrationEntry;
 import com.gpfteam.catshow.catshow_backend.model.Show;
+import com.gpfteam.catshow.catshow_backend.model.enums.RegistrationStatus;
 import com.gpfteam.catshow.catshow_backend.repository.RegistrationEntryRepository;
 import com.gpfteam.catshow.catshow_backend.repository.ShowRepository;
 import com.gpfteam.catshow.catshow_backend.repository.RegistrationRepository;
@@ -128,8 +129,8 @@ public class PublicShowController {
         Long currentCount = registrationEntryRepository.countEntriesByShowIdAndStatus(
                 id,
                 Arrays.asList(
-                        Registration.RegistrationStatus.PLANNED,
-                        Registration.RegistrationStatus.CONFIRMED
+                        RegistrationStatus.PLANNED,
+                        RegistrationStatus.CONFIRMED
                 )
         );
 

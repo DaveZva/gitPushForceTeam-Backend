@@ -2,6 +2,7 @@ package com.gpfteam.catshow.catshow_backend.repository;
 
 import com.gpfteam.catshow.catshow_backend.model.Registration;
 import com.gpfteam.catshow.catshow_backend.model.RegistrationEntry;
+import com.gpfteam.catshow.catshow_backend.model.enums.RegistrationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,13 +16,14 @@ public interface RegistrationEntryRepository extends JpaRepository<RegistrationE
     @Query("SELECT COUNT(e) FROM RegistrationEntry e " +
             "WHERE e.registration.show.id = :showId " +
             "AND e.registration.status IN :statuses")
-    Long countEntriesByShowIdAndStatus(Long showId, List<Registration.RegistrationStatus> statuses);
+
+    Long countEntriesByShowIdAndStatus(Long showId, List<RegistrationStatus> statuses);
 
     @Query("SELECT COUNT(e) FROM RegistrationEntry e WHERE e.registration.status = :status")
-    long countByRegistrationStatus(@Param("status") Registration.RegistrationStatus status);
+    long countByRegistrationStatus(@Param("status") RegistrationStatus status);
 
     @Query("SELECT COUNT(e) FROM RegistrationEntry e WHERE e.registration.show.id = :showId AND e.registration.status = :status")
-    long countByShowIdAndRegistrationStatus(@Param("showId") Long showId, @Param("status") Registration.RegistrationStatus status);
+    long countByShowIdAndRegistrationStatus(@Param("showId") Long showId, @Param("status") RegistrationStatus status);
 
     @Query("SELECT re FROM RegistrationEntry re WHERE re.registration.show.id = :showId")
     List<RegistrationEntry> findByShowId(@Param("showId") Long showId);
