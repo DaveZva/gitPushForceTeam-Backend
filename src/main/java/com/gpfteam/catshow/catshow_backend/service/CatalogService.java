@@ -4,6 +4,8 @@ import com.gpfteam.catshow.catshow_backend.model.Cat;
 import com.gpfteam.catshow.catshow_backend.model.Registration;
 import com.gpfteam.catshow.catshow_backend.model.RegistrationEntry;
 import com.gpfteam.catshow.catshow_backend.model.Show;
+import com.gpfteam.catshow.catshow_backend.model.enums.RegistrationStatus;
+import com.gpfteam.catshow.catshow_backend.model.enums.ShowClass;
 import com.gpfteam.catshow.catshow_backend.repository.RegistrationEntryRepository;
 import com.gpfteam.catshow.catshow_backend.repository.RegistrationRepository;
 import com.gpfteam.catshow.catshow_backend.repository.ShowRepository;
@@ -42,7 +44,7 @@ public class CatalogService {
 
         List<Registration> confirmedRegistrations = registrationRepository.findByShowAndStatus(
                 show,
-                Registration.RegistrationStatus.CONFIRMED
+                RegistrationStatus.CONFIRMED
         );
 
         List<RegistrationEntry> entries = confirmedRegistrations.stream()
@@ -92,7 +94,7 @@ public class CatalogService {
         registrationEntryRepository.save(entry);
     }
 
-    private int getClassRank(RegistrationEntry.ShowClass showClass) {
+    private int getClassRank(ShowClass showClass) {
         return showClass != null ? showClass.getSortOrder() : 99;
     }
 
@@ -101,7 +103,7 @@ public class CatalogService {
                 .orElseThrow(() -> new IllegalArgumentException("Show not found"));
 
         List<Registration> confirmedRegistrations = registrationRepository.findByShowAndStatus(
-                show, Registration.RegistrationStatus.CONFIRMED
+                show, RegistrationStatus.CONFIRMED
         );
 
         List<RegistrationEntry> entries = confirmedRegistrations.stream()
@@ -142,7 +144,7 @@ public class CatalogService {
                 .orElseThrow(() -> new IllegalArgumentException("Show not found"));
 
         List<Registration> confirmedRegistrations = registrationRepository.findByShowAndStatus(
-                show, Registration.RegistrationStatus.CONFIRMED
+                show, RegistrationStatus.CONFIRMED
         );
 
         List<RegistrationEntry> entries = confirmedRegistrations.stream()

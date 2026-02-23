@@ -1,5 +1,6 @@
 package com.gpfteam.catshow.catshow_backend.model;
 
+import com.gpfteam.catshow.catshow_backend.model.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;

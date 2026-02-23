@@ -1,8 +1,9 @@
 package com.gpfteam.catshow.catshow_backend.service;
 
 import com.gpfteam.catshow.catshow_backend.model.Registration;
+import com.gpfteam.catshow.catshow_backend.model.enums.RegistrationStatus;
 import com.gpfteam.catshow.catshow_backend.repository.RegistrationRepository;
-import com.gpfteam.catshow.catshow_backend.model.Registration.RegistrationStatus;
+import com.gpfteam.catshow.catshow_backend.model.enums.RegistrationStatus;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
@@ -40,8 +41,7 @@ public class PaymentService {
         if (price <= 0) {
             throw new RuntimeException("Cena musí být vyšší než 0");
         }
-
-        if (registration.getStatus() == Registration.RegistrationStatus.CONFIRMED) {
+        if (registration.getStatus() == RegistrationStatus.CONFIRMED) {
             throw new RuntimeException("Tato registrace je již zaplacena.");
         }
 
@@ -89,13 +89,13 @@ public class PaymentService {
 
         System.out.println("Registrace nalezena. Aktuální stav v DB: " + registration.getStatus());
 
-        if (registration.getStatus() == Registration.RegistrationStatus.CONFIRMED) {
+        if (registration.getStatus() == RegistrationStatus.CONFIRMED) {
             System.out.println("SKIP: Tato registrace už je potvrzená.");
             return;
         }
 
         System.out.println("Měním stav na CONFIRMED...");
-        registration.setStatus(Registration.RegistrationStatus.CONFIRMED);
+        registration.setStatus(RegistrationStatus.CONFIRMED);
         registration.setStripePaymentIntentId(paymentIntent.getId());
         registration.setAmountPaid(paymentIntent.getAmount());
         registration.setPaidAt(LocalDateTime.now());

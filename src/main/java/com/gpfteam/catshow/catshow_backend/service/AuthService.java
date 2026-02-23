@@ -3,7 +3,7 @@ package com.gpfteam.catshow.catshow_backend.service;
 import com.gpfteam.catshow.catshow_backend.dto.AuthResponse;
 import com.gpfteam.catshow.catshow_backend.dto.LoginRequest;
 import com.gpfteam.catshow.catshow_backend.dto.RegisterRequest;
-import com.gpfteam.catshow.catshow_backend.model.Role;
+import com.gpfteam.catshow.catshow_backend.model.enums.Role;
 import com.gpfteam.catshow.catshow_backend.model.User;
 import com.gpfteam.catshow.catshow_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;

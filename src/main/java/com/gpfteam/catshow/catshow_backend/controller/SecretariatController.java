@@ -2,6 +2,8 @@ package com.gpfteam.catshow.catshow_backend.controller;
 
 import com.gpfteam.catshow.catshow_backend.dto.*;
 import com.gpfteam.catshow.catshow_backend.model.*;
+import com.gpfteam.catshow.catshow_backend.model.enums.RegistrationStatus;
+import com.gpfteam.catshow.catshow_backend.model.enums.ShowClass;
 import com.gpfteam.catshow.catshow_backend.repository.*;
 import com.gpfteam.catshow.catshow_backend.service.CatalogService;
 import com.gpfteam.catshow.catshow_backend.service.PaymentService;
@@ -75,7 +77,7 @@ public class SecretariatController {
 
         for (Registration reg : registrations) {
             if (reg.getEntries() != null) totalCats += reg.getEntries().size();
-            if (reg.getStatus() == Registration.RegistrationStatus.CONFIRMED) confirmedRegs++;
+            if (reg.getStatus() == RegistrationStatus.CONFIRMED) confirmedRegs++;
         }
 
         return ResponseEntity.ok(SecretariatShowDetailDto.builder()
@@ -175,7 +177,7 @@ public class SecretariatController {
 
         if (dto.getShowClass() != null && !dto.getShowClass().isEmpty()) {
             try {
-                entry.setShowClass(RegistrationEntry.ShowClass.valueOf(dto.getShowClass().toUpperCase()));
+                entry.setShowClass(ShowClass.valueOf(dto.getShowClass().toUpperCase()));
             } catch (Exception e) {
                 System.err.println("Chyba při parsování ShowClass: " + dto.getShowClass());
             }
@@ -345,7 +347,7 @@ public class SecretariatController {
             long price = reg.getAmountPaid() != null ? reg.getAmountPaid() : paymentService.calculatePrice(reg);
 
             String method = "PENDING";
-            if (reg.getStatus() == Registration.RegistrationStatus.CONFIRMED) {
+            if (reg.getStatus() == RegistrationStatus.CONFIRMED) {
                 method = reg.getStripePaymentIntentId() != null ? "STRIPE" : "MANUAL";
             }
 
@@ -371,9 +373,9 @@ public class SecretariatController {
         Registration registration = registrationRepository.findById(registrationId)
                 .orElseThrow(() -> new RuntimeException("Registrace nenalezena"));
 
-        if (registration.getStatus() != Registration.RegistrationStatus.CONFIRMED) {
+        if (registration.getStatus() != RegistrationStatus.CONFIRMED) {
             long price = paymentService.calculatePrice(registration);
-            registration.setStatus(Registration.RegistrationStatus.CONFIRMED);
+            registration.setStatus(RegistrationStatus.CONFIRMED);
             registration.setAmountPaid(price);
             registration.setPaidAt(LocalDateTime.now());
             registration.setStripePaymentIntentId(null);

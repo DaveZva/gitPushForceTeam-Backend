@@ -46,6 +46,8 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/v1/secretariat/**").hasAnyAuthority("SECRETARIAT", "ADMIN")
 
+                        .requestMatchers("/ws-calling/**").permitAll()
+
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

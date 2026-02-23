@@ -6,6 +6,9 @@ import com.gpfteam.catshow.catshow_backend.dto.RegistrationDetailResponse;
 import com.gpfteam.catshow.catshow_backend.dto.RegistrationPayload;
 import com.gpfteam.catshow.catshow_backend.dto.RegistrationResponse;
 import com.gpfteam.catshow.catshow_backend.model.*;
+import com.gpfteam.catshow.catshow_backend.model.enums.CageType;
+import com.gpfteam.catshow.catshow_backend.model.enums.RegistrationStatus;
+import com.gpfteam.catshow.catshow_backend.model.enums.ShowClass;
 import com.gpfteam.catshow.catshow_backend.repository.*;
 import com.gpfteam.catshow.catshow_backend.util.EmsUtility;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +22,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
@@ -66,7 +68,7 @@ public class RegistrationService {
                 .show(show)
                 .owner(owner)
                 .breeder(breeder)
-                .status(Registration.RegistrationStatus.PLANNED)
+                .status(RegistrationStatus.PLANNED)
                 .days(payload.getShow().getDays())
                 .notes(payload.getNotes())
                 .dataAccuracy(payload.getConsents() != null && payload.getConsents().getOrDefault("dataAccuracy", false))
@@ -233,23 +235,23 @@ public class RegistrationService {
         return entry;
     }
 
-    private RegistrationEntry.ShowClass mapShowClass(String input) {
+    private ShowClass mapShowClass(String input) {
         try {
-            return RegistrationEntry.ShowClass.valueOf(input.toUpperCase());
+            return ShowClass.valueOf(input.toUpperCase());
         } catch (IllegalArgumentException e) {
             switch (input.trim()) {
-                case "1": return RegistrationEntry.ShowClass.SUPREME_CHAMPION;
-                case "2": return RegistrationEntry.ShowClass.SUPREME_PREMIOR;
-                case "3": return RegistrationEntry.ShowClass.GRANT_INTER_CHAMPION;
-                case "4": return RegistrationEntry.ShowClass.GRANT_INTER_PREMIER;
-                case "5": return RegistrationEntry.ShowClass.INTERNATIONAL_CHAMPION;
-                case "6": return RegistrationEntry.ShowClass.INTERNATIONAL_PREMIER;
-                case "7": return RegistrationEntry.ShowClass.CHAMPION;
-                case "8": return RegistrationEntry.ShowClass.PREMIER;
-                case "9": return RegistrationEntry.ShowClass.OPEN;
-                case "10": return RegistrationEntry.ShowClass.NEUTER;
-                case "11": return RegistrationEntry.ShowClass.JUNIOR;
-                case "12": return RegistrationEntry.ShowClass.KITTEN;
+                case "1": return ShowClass.SUPREME_CHAMPION;
+                case "2": return ShowClass.SUPREME_PREMIOR;
+                case "3": return ShowClass.GRANT_INTER_CHAMPION;
+                case "4": return ShowClass.GRANT_INTER_PREMIER;
+                case "5": return ShowClass.INTERNATIONAL_CHAMPION;
+                case "6": return ShowClass.INTERNATIONAL_PREMIER;
+                case "7": return ShowClass.CHAMPION;
+                case "8": return ShowClass.PREMIER;
+                case "9": return ShowClass.OPEN;
+                case "10": return ShowClass.NEUTER;
+                case "11": return ShowClass.JUNIOR;
+                case "12": return ShowClass.KITTEN;
                 default:
                     logger.warn("Nenalezeno mapování pro třídu: {}", input);
                     return null;
@@ -257,16 +259,16 @@ public class RegistrationService {
         }
     }
 
-    private RegistrationEntry.CageType mapCageType(String input) {
+    private CageType mapCageType(String input) {
         String normalized = input.toUpperCase().trim();
-        if (normalized.contains("OWN")) return RegistrationEntry.CageType.OWN_CAGE;
-        if (normalized.contains("SINGLE")) return RegistrationEntry.CageType.RENT_SMALL;
-        if (normalized.contains("DOUBLE")) return RegistrationEntry.CageType.RENT_LARGE;
+        if (normalized.contains("OWN")) return CageType.OWN_CAGE;
+        if (normalized.contains("SINGLE")) return CageType.RENT_SMALL;
+        if (normalized.contains("DOUBLE")) return CageType.RENT_LARGE;
 
         try {
-            return RegistrationEntry.CageType.valueOf(normalized);
+            return CageType.valueOf(normalized);
         } catch (IllegalArgumentException e) {
-            return RegistrationEntry.CageType.OWN_CAGE;
+            return CageType.OWN_CAGE;
         }
     }
 

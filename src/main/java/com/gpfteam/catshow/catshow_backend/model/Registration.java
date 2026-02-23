@@ -1,6 +1,7 @@
 package com.gpfteam.catshow.catshow_backend.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.gpfteam.catshow.catshow_backend.model.enums.RegistrationStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,12 +24,6 @@ public class Registration {
 
     private String registrationNumber;
 
-    public enum RegistrationStatus {
-        PLANNED,
-        CONFIRMED,
-        REJECTED,
-        CANCELLED
-    }
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

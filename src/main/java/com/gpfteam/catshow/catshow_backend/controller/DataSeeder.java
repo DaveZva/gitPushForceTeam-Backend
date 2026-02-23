@@ -1,6 +1,10 @@
 package com.gpfteam.catshow.catshow_backend.controller;
 
 import com.gpfteam.catshow.catshow_backend.model.*;
+import com.gpfteam.catshow.catshow_backend.model.enums.CageType;
+import com.gpfteam.catshow.catshow_backend.model.enums.RegistrationStatus;
+import com.gpfteam.catshow.catshow_backend.model.enums.Role;
+import com.gpfteam.catshow.catshow_backend.model.enums.ShowClass;
 import com.gpfteam.catshow.catshow_backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -185,7 +189,7 @@ public class DataSeeder implements CommandLineRunner {
             // 4. Vytvořit Registraci
             Registration registration = Registration.builder()
                     .registrationNumber(UUID.randomUUID().toString().substring(0, 8).toUpperCase())
-                    .status(Registration.RegistrationStatus.CONFIRMED)
+                    .status(RegistrationStatus.CONFIRMED)
                     .show(show)
                     .user(ownerUser)
                     .owner(regOwner) // Použijeme buď nového nebo existujícího ownera
@@ -204,7 +208,7 @@ public class DataSeeder implements CommandLineRunner {
                     .registration(registration)
                     .cat(cat)
                     .showClass(getRandomShowClass())
-                    .cageType(RegistrationEntry.CageType.OWN_CAGE)
+                    .cageType(CageType.OWN_CAGE)
                     .neutered(false)
                     .catalogNumber(i + 1)
                     .build();
@@ -233,8 +237,8 @@ public class DataSeeder implements CommandLineRunner {
                 .build();
     }
 
-    private RegistrationEntry.ShowClass getRandomShowClass() {
-        RegistrationEntry.ShowClass[] classes = RegistrationEntry.ShowClass.values();
+    private ShowClass getRandomShowClass() {
+        ShowClass[] classes = ShowClass.values();
         return classes[random.nextInt(classes.length)];
     }
 

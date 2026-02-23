@@ -1,6 +1,7 @@
 package com.gpfteam.catshow.catshow_backend.service;
 
 import com.gpfteam.catshow.catshow_backend.model.*;
+import com.gpfteam.catshow.catshow_backend.model.enums.ShowClass;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -323,7 +324,7 @@ public class PdfGenerationService {
         return val != null ? val : "";
     }
 
-    private String getClassCode(RegistrationEntry.ShowClass showClass) {
+    private String getClassCode(ShowClass showClass) {
         return showClass != null ? showClass.getFifeCode() : "";
     }
 

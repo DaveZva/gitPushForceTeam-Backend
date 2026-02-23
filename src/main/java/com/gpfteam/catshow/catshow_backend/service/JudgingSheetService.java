@@ -4,6 +4,7 @@ import com.gpfteam.catshow.catshow_backend.dto.BreedDistributionDto;
 import com.gpfteam.catshow.catshow_backend.dto.JudgeWorkloadDto;
 import com.gpfteam.catshow.catshow_backend.dto.JudgingSheetDto;
 import com.gpfteam.catshow.catshow_backend.model.*;
+import com.gpfteam.catshow.catshow_backend.model.enums.JudgingStatus;
 import com.gpfteam.catshow.catshow_backend.repository.*;
 import com.gpfteam.catshow.catshow_backend.service.PdfGenerationService;
 import lombok.RequiredArgsConstructor;
@@ -64,7 +65,7 @@ public class JudgingSheetService {
                         .judge(judge)
                         .catEntry(catEntry)
                         .day(day)
-                        .status(JudgingSheet.JudgingStatus.PENDING)
+                        .status(JudgingStatus.PENDING)
                         .catalogNumber(catEntry.getCatalogNumber())
                         .createdAt(LocalDateTime.now())
                         .build();
@@ -94,7 +95,7 @@ public class JudgingSheetService {
                             .judge(judge)
                             .catEntry(catEntry)
                             .day(day)
-                            .status(JudgingSheet.JudgingStatus.PENDING)
+                            .status(JudgingStatus.PENDING)
                             .catalogNumber(catEntry.getCatalogNumber())
                             .createdAt(LocalDateTime.now())
                             .build();
