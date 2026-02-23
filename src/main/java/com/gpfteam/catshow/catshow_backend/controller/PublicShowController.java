@@ -19,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -55,6 +56,8 @@ public class PublicShowController {
                 catalogEntries.add(mapEntryToDto(entry, reg));
             }
         }
+
+        catalogEntries.sort(Comparator.comparingInt(PublicCatalogEntryDto::getEntryNumber));
 
         return ResponseEntity.ok(catalogEntries);
     }
@@ -103,7 +106,8 @@ public class PublicShowController {
                 .category(EmsUtility.getCategory(cat.getEmsCode()))
                 .color(emsCode)
                 .className(entry.getShowClass() != null ? entry.getShowClass().name() : "")
-                .showClassCode(Integer.parseInt(entry.getShowClassCode()))
+                .showClassCode(entry.getShowClassCode() != null ? entry.getShowClassCode() : "")
+                .classSortOrder(entry.getShowClassSortOrder() != null ? entry.getShowClassSortOrder() : 0)
                 .group(cat.getCatGroup())
                 .build();
     }
