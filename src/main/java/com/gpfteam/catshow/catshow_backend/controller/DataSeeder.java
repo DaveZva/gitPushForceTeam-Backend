@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.random.RandomGeneratorFactory;
 
 @Component
 @RequiredArgsConstructor
@@ -34,9 +35,11 @@ public class DataSeeder implements CommandLineRunner {
     private final Random random = new Random();
 
     // Pomocná data pro generování
-    private static final String[] FIRST_NAMES = {"Petr", "Jana", "Pavel", "Eva", "Martin", "Lucie", "Tomáš", "Kateřina", "Jan", "Anna", "Jiří", "Lenka"};
+    private static final String[] FIRST_NAMES = {"Petr", "Jana", "Pavel", "Eva", "Martin", "Lucie", "Tomáš", "Kateřina", "Jan", "Anna", "Jiří", "Lenka", "František", "Marie", "Marek", "David", "Martin", "Jan", "Dominik", "Ondřej"};
     private static final String[] LAST_NAMES = {"Novák", "Svobodová", "Dvořák", "Černá", "Procházka", "Kučerová", "Veselý", "Horáková", "Němec", "Marek"};
+    private static final String[] EMAILS = {"nova", "prvniemail", "pavel", "luciem", "romanva", "ludds", "pohar", "louskacek", "frantisek", "novysvet", "vsudedobre"};
     private static final String[] CAT_NAMES = {"Mourrek", "Luna", "Garfield", "Minda", "Simba", "Bella", "Leo", "Lilly", "Loki", "Nala", "Micinka", "Felix"};
+    private static final String[] GROUPS = {"1", "2", "3", "4"};
     private static final String[] BREEDS = {"MCO", "RAG", "BSH", "SIA", "PER", "SPH", "RUS", "BEN"};
     private static final String[] EMS_COLORS = {"n", "a", "d", "e", "f", "g", "w"};
     private static final String[] CITIES = {"Praha", "Brno", "Ostrava", "Plzeň", "Liberec", "Olomouc"};
@@ -108,9 +111,9 @@ public class DataSeeder implements CommandLineRunner {
     private void createJudges() {
         for (int i = 1; i <= 10; i++) {
             Judge judge = Judge.builder()
-                    .firstName("Judge" + i)
+                    .firstName(getRandom(FIRST_NAMES))
                     .lastName(getRandom(LAST_NAMES))
-                    .email("judge" + i + "@catshow.com")
+                    .email(getRandom(EMAILS) + i + "@catshow.com")
                     .country(i % 2 == 0 ? "CZ" : "PL")
                     .validGroups(List.of("1", "2", "3", "4"))
                     .build();

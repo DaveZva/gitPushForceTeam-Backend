@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/calling")
+@RequestMapping("/api/v1/calling")
 @RequiredArgsConstructor
 public class CallingController {
 
@@ -38,5 +38,10 @@ public class CallingController {
     @GetMapping("/show/{showId}")
     public ResponseEntity<List<CallingRecord>> getActiveCalls(@PathVariable Long showId) {
         return ResponseEntity.ok(callingService.getActiveCallsForShow(showId));
+    }
+
+    @GetMapping("/show/{showId}/board-state")
+    public ResponseEntity<List<com.gpfteam.catshow.catshow_backend.dto.PublicBoardDto>> getBoardState(@PathVariable Long showId) {
+        return ResponseEntity.ok(callingService.getPublicBoardState(showId));
     }
 }
