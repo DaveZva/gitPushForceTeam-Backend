@@ -10,7 +10,8 @@ public class PublicBoardDto {
     private Long judgeId;
     private String judgeName;
     private String tableNo;
-    private BoardCatDto currentCat;
+    private Boolean isPaused;
+    private List<BoardCatDto> currentCats;
     private List<BoardCatDto> preparingCats;
     private List<BoardCatDto> waitingCats;
 
