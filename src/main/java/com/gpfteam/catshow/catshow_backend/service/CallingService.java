@@ -73,7 +73,7 @@ public class CallingService {
         return callingRecordRepository.findByShowId(showId);
     }
 
-    private void broadcastShowBoardUpdate(Long showId) {
+    public void broadcastShowBoardUpdate(Long showId) {
         List<CallingRecord> activeCalls = getActiveCallsForShow(showId);
         messagingTemplate.convertAndSend("/topic/show/" + showId + "/board", activeCalls);
     }
@@ -91,32 +91,30 @@ public class CallingService {
 
                     String tableNo = "T" + lock.getTableNumber();
 
-                    CallingRecord activeCall = activeCalls.stream()
+                    List<CallingRecord> tableCalls = activeCalls.stream()
                             .filter(c -> c.getTableNo() != null && c.getTableNo().equals(tableNo))
-                            .findFirst()
-                            .orElse(null);
+                            .collect(Collectors.toList());
 
-                    PublicBoardDto.BoardCatDto currentCat = null;
-                    if (activeCall != null) {
-                        currentCat = PublicBoardDto.BoardCatDto.builder()
+                    List<PublicBoardDto.BoardCatDto> currentCats = tableCalls.stream().map(activeCall -> {
+                        PublicBoardDto.BoardCatDto catDto = PublicBoardDto.BoardCatDto.builder()
                                 .catalogNumber(activeCall.getCatNumber())
                                 .ems("...")
                                 .type(activeCall.getCategory())
                                 .urgency(activeCall.getUrgency().name())
                                 .build();
 
-                        Optional<JudgingSheet> sheetOpt = allSheets.stream()
+                        allSheets.stream()
                                 .filter(s -> s.getCatalogNumber().equals(activeCall.getCatNumber()))
-                                .findFirst();
-                        if (sheetOpt.isPresent()) {
-                            currentCat.setEms(sheetOpt.get().getCatEntry().getCat().getEmsCode());
-                        }
-                    }
+                                .findFirst()
+                                .ifPresent(sheet -> catDto.setEms(sheet.getCatEntry().getCat().getEmsCode()));
+
+                        return catDto;
+                    }).collect(Collectors.toList());
 
                     List<PublicBoardDto.BoardCatDto> preparingCats = allSheets.stream()
                             .filter(s -> s.getJudge().getId().equals(judge.getId()) && s.getStatus() == JudgingStatus.READY)
                             .sorted(Comparator.comparing(JudgingSheet::getCatalogNumber))
-                            .limit(2)
+                            .limit(6)
                             .map(s -> PublicBoardDto.BoardCatDto.builder()
                                     .catalogNumber(s.getCatalogNumber())
                                     .ems(s.getCatEntry().getCat().getEmsCode())
@@ -128,7 +126,7 @@ public class CallingService {
                     List<PublicBoardDto.BoardCatDto> waitingCats = allSheets.stream()
                             .filter(s -> s.getJudge().getId().equals(judge.getId()) && s.getStatus() == JudgingStatus.PENDING)
                             .sorted(Comparator.comparing(JudgingSheet::getCatalogNumber))
-                            .limit(2)
+                            .limit(6)
                             .map(s -> PublicBoardDto.BoardCatDto.builder()
                                     .catalogNumber(s.getCatalogNumber())
                                     .ems(s.getCatEntry().getCat().getEmsCode())
@@ -141,7 +139,8 @@ public class CallingService {
                             .judgeId(judge.getId())
                             .judgeName(judge.getFirstName() + " " + judge.getLastName())
                             .tableNo(tableNo)
-                            .currentCat(currentCat)
+                            .isPaused(lock.getIsPaused() != null && lock.getIsPaused())
+                            .currentCats(currentCats)
                             .preparingCats(preparingCats)
                             .waitingCats(waitingCats)
                             .build();

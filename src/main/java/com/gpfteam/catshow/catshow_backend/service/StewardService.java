@@ -134,4 +134,14 @@ public class StewardService {
         }
         judgingSheetRepository.save(sheet);
     }
+
+    @Transactional
+    public void togglePause(Long showId, Long judgeId, boolean isPaused) {
+        Optional<StewardLock> lockOpt = stewardLockRepository.findByShowIdAndJudgeId(showId, judgeId);
+        if (lockOpt.isPresent()) {
+            StewardLock lock = lockOpt.get();
+            lock.setIsPaused(isPaused);
+            stewardLockRepository.save(lock);
+        }
+    }
 }

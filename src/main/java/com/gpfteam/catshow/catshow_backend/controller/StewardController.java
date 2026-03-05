@@ -2,6 +2,7 @@ package com.gpfteam.catshow.catshow_backend.controller;
 
 import com.gpfteam.catshow.catshow_backend.dto.StewardJudgeDto;
 import com.gpfteam.catshow.catshow_backend.dto.StewardQueueEntryDto;
+import com.gpfteam.catshow.catshow_backend.service.CallingService;
 import com.gpfteam.catshow.catshow_backend.service.StewardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,7 @@ import java.util.Map;
 public class StewardController {
 
     private final StewardService stewardService;
+    private final CallingService callingService;
 
     @GetMapping("/shows/{showId}/judges")
     public ResponseEntity<List<StewardJudgeDto>> getJudges(@PathVariable Long showId, Authentication auth) {
@@ -49,6 +51,17 @@ public class StewardController {
     @PatchMapping("/sheets/{sheetId}/status")
     public ResponseEntity<Void> updateSheetStatus(@PathVariable Long sheetId, @RequestBody Map<String, String> payload) {
         stewardService.updateSheetStatus(sheetId, payload.get("status"));
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/show/{showId}/judge/{judgeId}/pause")
+    public ResponseEntity<Void> togglePause(
+            @PathVariable Long showId,
+            @PathVariable Long judgeId,
+            @RequestBody java.util.Map<String, Boolean> payload) {
+        boolean isPaused = payload.getOrDefault("isPaused", false);
+        stewardService.togglePause(showId, judgeId, isPaused);
+        callingService.broadcastShowBoardUpdate(showId);
         return ResponseEntity.ok().build();
     }
 }

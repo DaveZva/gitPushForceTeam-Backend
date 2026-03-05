@@ -20,4 +20,6 @@ public class StewardLock {
     private Long userId;
     private String stewardName;
     private Integer tableNumber;
+    @Builder.Default
+    private Boolean isPaused = false;
 }

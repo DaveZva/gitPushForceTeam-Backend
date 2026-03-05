@@ -28,7 +28,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: create  # Pro development, v produkci použít 'validate' 'update' 'create-drop'
+      ddl-auto: update  # Pro development, v produkci použít 'validate' 'update' 'create-drop'
     show-sql: true
     properties:
       hibernate:
@@ -38,7 +38,7 @@ spring:
 
   sql:
     init:
-      mode: always
+      mode: never
 
   management:
     endpoints:
