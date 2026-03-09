@@ -56,14 +56,10 @@ public class PdfGenerationService {
             cs.setFont(fontBold, 18);
             cs.setNonStrokingColor(1f, 1f, 1f);
             cs.newLineAtOffset(pageMargin, yPosition + 22);
-            cs.showText(judge.getFirstName() + " " + judge.getLastName());
+            cs.showText(judge.getFirstName() + " " + judge.getLastName() + " - " + day);
             cs.endText();
 
-            cs.beginText();
-            cs.setFont(fontRegular, 10);
-            cs.newLineAtOffset(pageMargin, yPosition + 8);
-            cs.showText(day);
-            cs.endText();
+
 
             yPosition -= 50;
 
