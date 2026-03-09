@@ -3,6 +3,7 @@ package com.gpfteam.catshow.catshow_backend.repository;
 import com.gpfteam.catshow.catshow_backend.model.Registration;
 import com.gpfteam.catshow.catshow_backend.model.RegistrationEntry;
 import com.gpfteam.catshow.catshow_backend.model.enums.RegistrationStatus;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -33,4 +34,8 @@ public interface RegistrationEntryRepository extends JpaRepository<RegistrationE
 
     @Query("SELECT COUNT(e) FROM RegistrationEntry e WHERE e.registration.show.id = :showId")
     long countByShowId(@Param("showId") Long showId);
+
+    @EntityGraph(attributePaths = {"cat", "registration.owner", "registration.breeder"})
+    @Query("SELECT e FROM RegistrationEntry e WHERE e.registration.show.id = :showId AND e.registration.status = :status")
+    List<RegistrationEntry> findConfirmedEntriesWithDetailsByShowId(@Param("showId") Long showId, @Param("status") RegistrationStatus status);
 }
