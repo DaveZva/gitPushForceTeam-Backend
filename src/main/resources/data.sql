@@ -48,11 +48,8 @@ INSERT INTO judge_valid_groups (judge_id, group_code) VALUES
                                                           (13, '2'), (13, '3'), (13, '4'),
                                                           (14, '1'), (14, '2'), (14, '4');
 
-
-
-
 -- ==========================================
--- 3. VÝSTAVY (shows) (Přidána reálná výstava s ID 4)
+-- 3. VÝSTAVY (shows)
 -- ==========================================
 INSERT INTO shows (id, name, description, status, venue_name, venue_address, venue_city, venue_state, venue_zip, start_date, end_date, registration_deadline, organizer_name, organizer_contact_email, organizer_website_url, max_cats) VALUES
                                                                                                                                                                                                                                             (1, 'Jarní výstava koček Praha', 'Výstava s kapacitou 50 koček', 'OPEN', 'Hala 1', 'Ulice 1', 'Praha', 'CZ', '10000', '2026-04-10 08:00:00', '2026-04-11 18:00:00', '2026-03-30 23:59:59', 'ZO Praha', 'info@praha.cz', 'www.praha.cz', 50),
@@ -77,9 +74,8 @@ INSERT INTO breeders (id, first_name, last_name, city)
 SELECT i, 'Chovatel' || i, 'Rodina' || i, 'Město ' || (i%5)
 FROM generate_series(1, 50) as i;
 
-
 -- =========================================================================================
--- ČÁST A: GENEROVANÁ DATA PRO VÝSTAVY 1, 2 a 3 (ID 1-650)
+-- ČÁST A: GENEROVANÁ DATA PRO VÝSTAVU 1 (Omezeno na 100 koček)
 -- =========================================================================================
 INSERT INTO cats (id, user_id, cat_name, ems_code, birth_date, pedigree_number, chip_number, breed, gender, category, father_name, mother_name)
 SELECT
@@ -105,7 +101,7 @@ SELECT
     (i % 4) + 1,
     'Otec ' || i,
     'Matka ' || i
-FROM generate_series(1, 650) as i;
+FROM generate_series(1, 100) as i;
 
 INSERT INTO registrations (id, registration_number, created_at, status, show_id, user_id, owner_id, breeder_id, days, data_accuracy, gdpr_consent, amount_paid, paid_at)
 SELECT
@@ -113,7 +109,7 @@ SELECT
     'REG-' || LPAD(i::text, 6, '0'),
     '2026-01-01 10:00:00'::timestamp,
     'CONFIRMED',
-    CASE WHEN i <= 50 THEN 1 WHEN i <= 250 THEN 2 ELSE 3 END,
+    1,
     (i % 8) + 3,
     ((i - 1) % 50) + 1,
     ((i - 1) % 50) + 1,
@@ -122,7 +118,7 @@ SELECT
     true,
     800,
     '2026-01-02 10:00:00'::timestamp
-FROM generate_series(1, 650) as i;
+FROM generate_series(1, 100) as i;
 
 INSERT INTO registration_entries (id, registration_id, cat_id, show_class, cage_type, neutered, catalog_number)
 SELECT
@@ -138,14 +134,13 @@ SELECT
     (ARRAY['OWN_CAGE', 'RENT_SMALL', 'RENT_LARGE'])[ (i % 3) + 1 ],
     CASE WHEN i % 2 = 0 THEN true ELSE false END,
     i
-FROM generate_series(1, 650) as i;
+FROM generate_series(1, 100) as i;
 
 -- =========================================================================================
 -- ČÁST B: REÁLNÁ DATA Z CSV (Pro speciální výstavu ID 4, kočky ID 1001-1034)
 -- OPRAVENÁ UNIKÁTNÍ ČÍSLA PEDIGREE PRO DOMÁCÍ KOČKY
 -- =========================================================================================
 
--- Vložení 34 přesných koček
 INSERT INTO cats (id, user_id, cat_name, ems_code, birth_date, pedigree_number, chip_number, breed, gender, category, father_name, mother_name) VALUES
                                                                                                                                                     (1001, 3, 'GIC Marquez Olicats * PL', 'RAG n 03', '2021-03-22', '(CZ)ČSCH LO 409/21/RAG', '616093900978057', 'RAG', 'MALE', 1, 'CH Daster von Werbellinsee', 'Tila Tequila Global House, PL'),
                                                                                                                                                     (1002, 4, 'JCH, KCH Guinevere DB Crystal Jewels *CZ, JW', 'RAG n 03', '2024-08-03', '(CZ) ČSCH LO 835/24/RAG', '900182002361516', 'RAG', 'FEMALE', 1, 'SC Dakar Nekonomicon *PL, DVM', 'CEW`24,CH,JCH Blue Crystal Jewels *CZ. JW'),
@@ -182,7 +177,6 @@ INSERT INTO cats (id, user_id, cat_name, ems_code, birth_date, pedigree_number, 
                                                                                                                                                     (1033, 3, 'Vrh H Your Grace, CZ', 'BML', '2025-11-23', 'LITTER-1033', 'NO-CHIP-1033', 'BML', 'MALE', 3, 'Radek Momoiro, CZ', 'CH SE Grayscale´s Maluhia'),
                                                                                                                                                     (1034, 4, 'JCH Engee Chalomon, CZ', 'BEN n 24', '2025-03-01', '(CZ) ČSCH LO 50/25/BEN', '203164000183629', 'BEN', 'FEMALE', 3, 'Valerian Felis Empire, CZ', 'Wanessa Klarisa Taylor Wild Cat, CZ');
 
--- Vložení 34 Registrací k Výstavě ID 4
 INSERT INTO registrations (id, registration_number, created_at, status, show_id, user_id, owner_id, breeder_id, days, data_accuracy, gdpr_consent, amount_paid, paid_at) VALUES
                                                                                                                                                                              (1001, 'REG-REALL-01', '2026-01-01 10:00:00', 'CONFIRMED', 4, 3, 1, 1, 'BOTH', true, true, 800, '2026-01-02 10:00:00'),
                                                                                                                                                                              (1002, 'REG-REALL-02', '2026-01-01 10:00:00', 'CONFIRMED', 4, 4, 2, 2, 'BOTH', true, true, 800, '2026-01-02 10:00:00'),
@@ -219,7 +213,6 @@ INSERT INTO registrations (id, registration_number, created_at, status, show_id,
                                                                                                                                                                              (1033, 'REG-REALL-33', '2026-01-01 10:00:00', 'CONFIRMED', 4, 3, 33, 33, 'BOTH', true, true, 800, '2026-01-02 10:00:00'),
                                                                                                                                                                              (1034, 'REG-REALL-34', '2026-01-01 10:00:00', 'CONFIRMED', 4, 4, 34, 34, 'BOTH', true, true, 800, '2026-01-02 10:00:00');
 
--- Vložení 34 přesných přihlášek (Přiřazeny správné třídy podle titulů v CSV)
 INSERT INTO registration_entries (id, registration_id, cat_id, show_class, cage_type, neutered, catalog_number) VALUES
                                                                                                                     (1001, 1001, 1001, 'GRANT_INTER_CHAMPION', 'OWN_CAGE', true, 1001),
                                                                                                                     (1002, 1002, 1002, 'JUNIOR', 'OWN_CAGE', false, 1002),
@@ -255,3 +248,12 @@ INSERT INTO registration_entries (id, registration_id, cat_id, show_class, cage_
                                                                                                                     (1032, 1032, 1032, 'OPEN', 'OWN_CAGE', false, 1032),
                                                                                                                     (1033, 1033, 1033, 'LITTER', 'OWN_CAGE', false, 1033),
                                                                                                                     (1034, 1034, 1034, 'JUNIOR', 'OWN_CAGE', false, 1034);
+
+SELECT setval(pg_get_serial_sequence('_user', 'id'), coalesce(max(id),0) + 1, false) FROM _user;
+SELECT setval(pg_get_serial_sequence('judges', 'id'), coalesce(max(id),0) + 1, false) FROM judges;
+SELECT setval(pg_get_serial_sequence('shows', 'id'), coalesce(max(id),0) + 1, false) FROM shows;
+SELECT setval(pg_get_serial_sequence('owners', 'id'), coalesce(max(id),0) + 1, false) FROM owners;
+SELECT setval(pg_get_serial_sequence('breeders', 'id'), coalesce(max(id),0) + 1, false) FROM breeders;
+SELECT setval(pg_get_serial_sequence('cats', 'id'), coalesce(max(id),0) + 1, false) FROM cats;
+SELECT setval(pg_get_serial_sequence('registrations', 'id'), coalesce(max(id),0) + 1, false) FROM registrations;
+SELECT setval(pg_get_serial_sequence('registration_entries', 'id'), coalesce(max(id),0) + 1, false) FROM registration_entries;
