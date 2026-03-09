@@ -38,23 +38,19 @@ public class SecretariatController {
     @GetMapping
     public ResponseEntity<List<SecretariatShowDetailDto>> getAllShowsForSecretariat() {
         List<Show> shows = showRepository.findAll(Sort.by(Sort.Direction.DESC, "startDate"));
-        List<Registration> allRegistrations = registrationRepository.findAll();
 
-        List<SecretariatShowDetailDto> dtos = shows.stream().map(s -> {
-            long count = allRegistrations.stream().filter(r -> r.getShow() != null && r.getShow().getId().equals(s.getId())).count();
-            return SecretariatShowDetailDto.builder()
-                    .id(s.getId())
-                    .name(s.getName())
-                    .status(s.getStatus().name())
-                    .venueCity(s.getVenueCity())
-                    .venueName(s.getVenueName())
-                    .startDate(s.getStartDate())
-                    .endDate(s.getEndDate())
-                    .registrationDeadline(s.getRegistrationDeadline())
-                    .maxCats(s.getMaxCats())
-                    .totalRegistrations((int) count)
-                    .build();
-        }).toList();
+        List<SecretariatShowDetailDto> dtos = shows.stream().map(s -> SecretariatShowDetailDto.builder()
+                .id(s.getId())
+                .name(s.getName())
+                .status(s.getStatus().name())
+                .venueCity(s.getVenueCity())
+                .venueName(s.getVenueName())
+                .startDate(s.getStartDate())
+                .endDate(s.getEndDate())
+                .registrationDeadline(s.getRegistrationDeadline())
+                .maxCats(s.getMaxCats())
+                .totalRegistrations(s.getRegistrations() != null ? s.getRegistrations().size() : 0)
+                .build()).toList();
 
         return ResponseEntity.ok(dtos);
     }
@@ -76,20 +72,12 @@ public class SecretariatController {
                 .orElseThrow(() -> new RuntimeException("Výstava nenalezena"));
 
         List<Registration> registrations = registrationRepository.findByShow(show);
-        List<RegistrationEntry> allEntries = registrationEntryRepository.findAll();
-
         int totalCats = 0;
         int confirmedRegs = 0;
 
         for (Registration reg : registrations) {
-            long entriesCount = allEntries.stream()
-                    .filter(e -> e.getRegistration() != null && e.getRegistration().getId().equals(reg.getId()))
-                    .count();
-            totalCats += entriesCount;
-
-            if (reg.getStatus() == RegistrationStatus.CONFIRMED) {
-                confirmedRegs++;
-            }
+            if (reg.getEntries() != null) totalCats += reg.getEntries().size();
+            if (reg.getStatus() == RegistrationStatus.CONFIRMED) confirmedRegs++;
         }
 
         return ResponseEntity.ok(SecretariatShowDetailDto.builder()
@@ -123,15 +111,9 @@ public class SecretariatController {
     public ResponseEntity<List<SecretariatRegistrationDto>> getRegistrationsByShow(@PathVariable Long showId) {
         Show show = showRepository.findById(showId).orElseThrow();
         List<Registration> registrations = registrationRepository.findByShow(show);
-        List<RegistrationEntry> allEntries = registrationEntryRepository.findAll();
-
         List<SecretariatRegistrationDto> dtos = new ArrayList<>();
         for (Registration reg : registrations) {
-            List<RegistrationEntry> regEntries = allEntries.stream()
-                    .filter(e -> e.getRegistration() != null && e.getRegistration().getId().equals(reg.getId()))
-                    .toList();
-
-            for (var entry : regEntries) {
+            for (var entry : reg.getEntries()) {
                 dtos.add(SecretariatRegistrationDto.builder()
                         .id(entry.getId())
                         .registrationNumber(reg.getRegistrationNumber())
@@ -196,7 +178,9 @@ public class SecretariatController {
         if (dto.getShowClass() != null && !dto.getShowClass().isEmpty()) {
             try {
                 entry.setShowClass(ShowClass.valueOf(dto.getShowClass().toUpperCase()));
-            } catch (Exception e) {}
+            } catch (Exception e) {
+                System.err.println("Chyba při parsování ShowClass: " + dto.getShowClass());
+            }
         }
 
         if (dto.getCatalogNumber() != null && !dto.getCatalogNumber().isEmpty()) {
@@ -358,7 +342,6 @@ public class SecretariatController {
                 .orElseThrow(() -> new RuntimeException("Výstava nenalezena"));
 
         List<Registration> registrations = registrationRepository.findByShow(show);
-        List<RegistrationEntry> allEntries = registrationEntryRepository.findAll();
 
         List<SecretariatPaymentDto> dtos = registrations.stream().map(reg -> {
             long price = reg.getAmountPaid() != null ? reg.getAmountPaid() : paymentService.calculatePrice(reg);
@@ -367,10 +350,6 @@ public class SecretariatController {
             if (reg.getStatus() == RegistrationStatus.CONFIRMED) {
                 method = reg.getStripePaymentIntentId() != null ? "STRIPE" : "MANUAL";
             }
-
-            long catCount = allEntries.stream()
-                    .filter(e -> e.getRegistration() != null && e.getRegistration().getId().equals(reg.getId()))
-                    .count();
 
             return SecretariatPaymentDto.builder()
                     .registrationId(reg.getId())
@@ -382,7 +361,7 @@ public class SecretariatController {
                     .paymentMethod(method)
                     .paidAt(reg.getPaidAt())
                     .createdAt(reg.getCreatedAt())
-                    .catCount((int) catCount)
+                    .catCount(reg.getEntries() != null ? reg.getEntries().size() : 0)
                     .build();
         }).toList();
 
