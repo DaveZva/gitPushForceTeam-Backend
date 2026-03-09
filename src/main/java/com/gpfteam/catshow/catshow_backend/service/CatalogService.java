@@ -42,14 +42,7 @@ public class CatalogService {
             showRepository.save(show);
         }
 
-        List<Registration> confirmedRegistrations = registrationRepository.findByShowAndStatus(
-                show,
-                RegistrationStatus.CONFIRMED
-        );
-
-        List<RegistrationEntry> entries = confirmedRegistrations.stream()
-                .flatMap(reg -> reg.getEntries().stream())
-                .collect(Collectors.toList());
+        List<RegistrationEntry> entries = registrationEntryRepository.findConfirmedEntriesWithDetailsByShowId(showId, RegistrationStatus.CONFIRMED);
 
         entries.sort(Comparator
                 .comparingInt((RegistrationEntry e) -> EmsUtility.getCategory(e.getCat().getEmsCode()))
@@ -99,15 +92,9 @@ public class CatalogService {
     }
 
     public List<QuickCatalogEntryDto> getQuickCatalog(Long showId) {
-        Show show = showRepository.findById(showId)
-                .orElseThrow(() -> new IllegalArgumentException("Show not found"));
+        List<RegistrationEntry> entries = registrationEntryRepository.findConfirmedEntriesWithDetailsByShowId(showId, RegistrationStatus.CONFIRMED);
 
-        List<Registration> confirmedRegistrations = registrationRepository.findByShowAndStatus(
-                show, RegistrationStatus.CONFIRMED
-        );
-
-        List<RegistrationEntry> entries = confirmedRegistrations.stream()
-                .flatMap(reg -> reg.getEntries().stream())
+        entries = entries.stream()
                 .filter(e -> e.getCatalogNumber() != null)
                 .collect(Collectors.toList());
 
@@ -140,15 +127,9 @@ public class CatalogService {
     }
 
     public List<PublicCatalogEntryDto> getCatalog(Long showId) {
-        Show show = showRepository.findById(showId)
-                .orElseThrow(() -> new IllegalArgumentException("Show not found"));
+        List<RegistrationEntry> entries = registrationEntryRepository.findConfirmedEntriesWithDetailsByShowId(showId, RegistrationStatus.CONFIRMED);
 
-        List<Registration> confirmedRegistrations = registrationRepository.findByShowAndStatus(
-                show, RegistrationStatus.CONFIRMED
-        );
-
-        List<RegistrationEntry> entries = confirmedRegistrations.stream()
-                .flatMap(reg -> reg.getEntries().stream())
+        entries = entries.stream()
                 .filter(e -> e.getCatalogNumber() != null)
                 .collect(Collectors.toList());
 
