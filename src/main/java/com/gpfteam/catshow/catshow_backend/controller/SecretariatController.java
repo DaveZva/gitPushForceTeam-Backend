@@ -49,7 +49,7 @@ public class SecretariatController {
                 .endDate(s.getEndDate())
                 .registrationDeadline(s.getRegistrationDeadline())
                 .maxCats(s.getMaxCats())
-                .totalRegistrations(s.getRegistrations() != null ? s.getRegistrations().size() : 0)
+                .totalRegistrations((int) registrationRepository.countByShowId(s.getId()))
                 .build()).toList();
 
         return ResponseEntity.ok(dtos);
@@ -71,14 +71,9 @@ public class SecretariatController {
         Show show = showRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Výstava nenalezena"));
 
-        List<Registration> registrations = registrationRepository.findByShow(show);
-        int totalCats = 0;
-        int confirmedRegs = 0;
-
-        for (Registration reg : registrations) {
-            if (reg.getEntries() != null) totalCats += reg.getEntries().size();
-            if (reg.getStatus() == RegistrationStatus.CONFIRMED) confirmedRegs++;
-        }
+        long totalRegistrations = registrationRepository.countByShowId(id);
+        long confirmedRegs = registrationRepository.countByShowIdAndStatus(id, RegistrationStatus.CONFIRMED);
+        long totalCats = registrationEntryRepository.countByShowId(id);
 
         return ResponseEntity.ok(SecretariatShowDetailDto.builder()
                 .id(show.getId())
@@ -99,9 +94,9 @@ public class SecretariatController {
                 .vetCheckStart(show.getVetCheckStart())
                 .judgingStart(show.getJudgingStart())
                 .judgingEnd(show.getJudgingEnd())
-                .totalRegistrations(registrations.size())
-                .totalCats(totalCats)
-                .confirmedRegistrations(confirmedRegs)
+                .totalRegistrations((int) totalRegistrations)
+                .totalCats((int) totalCats)
+                .confirmedRegistrations((int) confirmedRegs)
                 .maxCats(show.getMaxCats())
                 .judgesCount(show.getJudges() != null ? show.getJudges().size() : 0)
                 .build());
@@ -109,8 +104,8 @@ public class SecretariatController {
 
     @GetMapping("/{showId}/registrations")
     public ResponseEntity<List<SecretariatRegistrationDto>> getRegistrationsByShow(@PathVariable Long showId) {
-        Show show = showRepository.findById(showId).orElseThrow();
-        List<Registration> registrations = registrationRepository.findByShow(show);
+        List<Registration> registrations = registrationRepository.findAllWithDetailsByShowId(showId);
+
         List<SecretariatRegistrationDto> dtos = new ArrayList<>();
         for (Registration reg : registrations) {
             for (var entry : reg.getEntries()) {
@@ -338,10 +333,7 @@ public class SecretariatController {
 
     @GetMapping("/{showId}/payments")
     public ResponseEntity<List<SecretariatPaymentDto>> getShowPayments(@PathVariable Long showId) {
-        Show show = showRepository.findById(showId)
-                .orElseThrow(() -> new RuntimeException("Výstava nenalezena"));
-
-        List<Registration> registrations = registrationRepository.findByShow(show);
+        List<Registration> registrations = registrationRepository.findAllWithDetailsByShowId(showId);
 
         List<SecretariatPaymentDto> dtos = registrations.stream().map(reg -> {
             long price = reg.getAmountPaid() != null ? reg.getAmountPaid() : paymentService.calculatePrice(reg);
