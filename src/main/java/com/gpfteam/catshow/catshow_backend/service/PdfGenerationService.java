@@ -2,6 +2,7 @@ package com.gpfteam.catshow.catshow_backend.service;
 
 import com.gpfteam.catshow.catshow_backend.model.*;
 import com.gpfteam.catshow.catshow_backend.model.enums.ShowClass;
+import jakarta.annotation.PostConstruct;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -15,7 +16,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class PdfGenerationService {
@@ -29,6 +32,19 @@ public class PdfGenerationService {
     private static final float[] TEXT_GRAY = {0.4f, 0.4f, 0.4f};
 
     private final float pageMargin = 40;
+    private final Map<String, byte[]> logoCache = new HashMap<>();
+
+    @PostConstruct
+    public void preloadLogos() {
+        String[] logoPaths = {"/logos/logo(1).png", "/logos/logo(2).png", "/logos/logo(3).png", "/logos/logo(4).png"};
+        for (String path : logoPaths) {
+            try (InputStream is = getClass().getResourceAsStream(path)) {
+                if (is != null) {
+                    logoCache.put(path, is.readAllBytes());
+                }
+            } catch (Exception ignored) {}
+        }
+    }
 
     public byte[] createJudgingSheetsPdf(List<JudgingSheet> sheets) throws IOException {
         if (sheets.isEmpty()) throw new IllegalArgumentException("No sheets to generate PDF");
@@ -247,12 +263,11 @@ public class PdfGenerationService {
         float currentX = (pageWidth - (4 * logoSize + 3 * spacing)) / 2;
 
         for (String path : logoPaths) {
-            try (InputStream is = getClass().getResourceAsStream(path)) {
-                if (is != null) {
-                    PDImageXObject img = PDImageXObject.createFromByteArray(doc, is.readAllBytes(), path);
-                    cs.drawImage(img, currentX, footerY, logoSize, logoSize);
-                }
-            } catch (Exception ignored) {}
+            byte[] logoBytes = logoCache.get(path);
+            if (logoBytes != null) {
+                PDImageXObject img = PDImageXObject.createFromByteArray(doc, logoBytes, path);
+                cs.drawImage(img, currentX, footerY, logoSize, logoSize);
+            }
             currentX += logoSize + spacing;
         }
     }
