@@ -69,6 +69,7 @@ public class Show {
             joinColumns = @JoinColumn(name = "show_id"),
             inverseJoinColumns = @JoinColumn(name = "judge_id")
     )
+    @JsonIgnore
     @Builder.Default
     private List<Judge> judges = new ArrayList<>();
 
