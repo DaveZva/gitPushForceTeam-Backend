@@ -1,6 +1,5 @@
 package com.gpfteam.catshow.catshow_backend.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.gpfteam.catshow.catshow_backend.model.enums.RegistrationStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -16,7 +15,10 @@ import org.hibernate.annotations.CreationTimestamp;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "registrations")
+@Table(name = "registrations", indexes = {
+        @Index(name = "idx_reg_show_status", columnList = "show_id, status"),
+        @Index(name = "idx_reg_user", columnList = "user_id")
+})
 public class Registration {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -67,4 +69,11 @@ public class Registration {
     private Long amountPaid; //halere
 
     private LocalDateTime paidAt;
+
+    @PostPersist
+    public void generateRegistrationNumber() {
+        if (this.registrationNumber == null || this.registrationNumber.startsWith("PENDING-")) {this.registrationNumber = "REG-" + java.time.Year.now().getValue() + "-" + this.id;
+        }
+    }
+
 }

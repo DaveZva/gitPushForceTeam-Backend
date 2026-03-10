@@ -15,14 +15,12 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Example;
-import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -89,26 +87,15 @@ public class RegistrationService {
 
         Registration savedRegistration = registrationRepository.save(registration);
 
-        String finalRegNumber = "REG-" + Year.now().getValue() + "-" + savedRegistration.getId();
-        savedRegistration.setRegistrationNumber(finalRegNumber);
-        registrationRepository.save(savedRegistration);
-
         return RegistrationResponse.builder()
                 .registrationId(savedRegistration.getId())
-                .registrationNumber(finalRegNumber)
-                .message("Registrace úspěšně vytvořena")
+                .registrationNumber(savedRegistration.getRegistrationNumber())
+                .message("Registrace úspěšně vytvořena.")
                 .build();
     }
 
     private Owner findOrCreateOwner(PersonPayload data) {
-        Owner probe = new Owner();
-        probe.setEmail(data.getEmail());
-
-        ExampleMatcher matcher = ExampleMatcher.matching()
-                .withIgnorePaths("id")
-                .withIgnoreNullValues();
-
-        return ownerRepository.findOne(Example.of(probe, matcher))
+        return ownerRepository.findByEmail(data.getEmail())
                 .orElseGet(() -> {
                     Owner newOwner = new Owner();
                     newOwner.setFirstName(data.getFirstName());
@@ -126,25 +113,21 @@ public class RegistrationService {
 
     private Breeder findOrCreateBreeder(PersonPayload data, Owner owner) {
         if (data == null || data.getFirstName() == null || data.getFirstName().isEmpty()) {
-            Breeder copy = new Breeder();
-            copy.setFirstName(owner.getFirstName());
-            copy.setLastName(owner.getLastName());
-            copy.setAddress(owner.getAddress());
-            copy.setZip(owner.getZip());
-            copy.setCity(owner.getCity());
-            copy.setEmail(owner.getEmail());
-            copy.setPhone(owner.getPhone());
-            return breederRepository.save(copy);
+            return breederRepository.findByEmailIgnoreCase(owner.getEmail())
+                    .orElseGet(() -> {
+                        Breeder copy = new Breeder();
+                        copy.setFirstName(owner.getFirstName());
+                        copy.setLastName(owner.getLastName());
+                        copy.setAddress(owner.getAddress());
+                        copy.setZip(owner.getZip());
+                        copy.setCity(owner.getCity());
+                        copy.setEmail(owner.getEmail());
+                        copy.setPhone(owner.getPhone());
+                        return breederRepository.save(copy);
+                    });
         }
 
-        Breeder probe = new Breeder();
-        probe.setEmail(data.getEmail());
-
-        ExampleMatcher matcher = ExampleMatcher.matching()
-                .withIgnorePaths("id")
-                .withIgnoreNullValues();
-
-        return breederRepository.findOne(Example.of(probe, matcher))
+        return breederRepository.findByEmailIgnoreCase(data.getEmail())
                 .orElseGet(() -> {
                     Breeder newBreeder = new Breeder();
                     newBreeder.setFirstName(data.getFirstName());
@@ -278,11 +261,15 @@ public class RegistrationService {
 
         String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
 
-        boolean isOwner = registration.getOwner().getEmail().equalsIgnoreCase(currentUserEmail);
+        boolean isOwner = registration.getUser() != null &&
+                registration.getUser().getEmail().equalsIgnoreCase(currentUserEmail);
+        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ADMIN") || a.getAuthority().equals("SECRETARIAT"));
 
-        if (!isOwner) {
+        if (!isOwner && !isAdmin) {
             throw new RuntimeException("Neoprávněný přístup.");
         }
+
 
         return RegistrationDetailResponse.builder()
                 .id(registration.getId())

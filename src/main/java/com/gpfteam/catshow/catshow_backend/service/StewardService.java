@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -82,12 +83,11 @@ public class StewardService {
         List<JudgingSheet> sheets = judgingSheetRepository.findByShowIdAndJudgeIdAndDay(showId, judgeId, "SATURDAY");
         List<CallingRecord> activeCalls = callingRecordRepository.findByShowId(showId);
 
-        return sheets.stream().map(sheet -> {
-            Optional<CallingRecord> callOpt = activeCalls.stream()
-                    .filter(c -> c.getCatNumber().equals(sheet.getCatalogNumber()))
-                    .findFirst();
+        Map<Integer, CallingRecord> callMap = activeCalls.stream().collect(Collectors.toMap(CallingRecord::getCatNumber, c -> c, (a, b) -> a));
 
-            boolean hasCall = callOpt.isPresent();
+        return sheets.stream().map(sheet -> {CallingRecord activeCall = callMap.get(sheet.getCatalogNumber());
+            boolean hasCall = activeCall != null;
+
             String status = sheet.getStatus().name();
 
             if (sheet.getStatus() == JudgingStatus.PENDING) {
@@ -108,8 +108,8 @@ public class StewardService {
                     .sex(sheet.getCatEntry().getCat().getGender().toString())
                     .birthDate(sheet.getCatEntry().getCat().getBirthDate())
                     .status(status)
-                    .urgency(hasCall ? callOpt.get().getUrgency().name() : "NORMAL")
-                    .callingRecordId(hasCall ? callOpt.get().getId() : null)
+                    .urgency(hasCall ? activeCall.getUrgency().name() : "NORMAL")
+                    .callingRecordId(hasCall ? activeCall.getId() : null)
                     .group(sheet.getCatEntry().getCat().getCatGroup())
                     .category(sheet.getCatEntry().getCat().getEmsCode() != null ? sheet.getCatEntry().getCat().getEmsCode().substring(0,1) : "I")
                     .breed(sheet.getCatEntry().getCat().getEmsCode() != null ? sheet.getCatEntry().getCat().getEmsCode().split(" ")[0] : "")

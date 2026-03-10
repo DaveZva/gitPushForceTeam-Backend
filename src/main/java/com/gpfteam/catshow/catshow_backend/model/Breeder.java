@@ -11,7 +11,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "breeders")
+@Table(name = "breeders", indexes = {
+        @Index(name = "idx_breeder_email", columnList = "email")
+})
 public class Breeder {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

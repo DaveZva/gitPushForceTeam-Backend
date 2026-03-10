@@ -8,6 +8,7 @@ import com.gpfteam.catshow.catshow_backend.repository.*;
 import com.gpfteam.catshow.catshow_backend.service.CatalogService;
 import com.gpfteam.catshow.catshow_backend.service.PaymentService;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
@@ -21,10 +22,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/secretariat/shows")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class SecretariatController {
     private final CatalogService catalogService;
     private final ShowRepository showRepository;
@@ -166,22 +167,26 @@ public class SecretariatController {
 
         if (dto.getGender() != null) {
             try {
-                cat.setGender(Cat.Gender.valueOf(dto.getGender()));
-            } catch (Exception e) {}
+                cat.setGender(Cat.Gender.valueOf(dto.getGender().toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                log.warn("Neznámé pohlaví '{}', ignoruji", dto.getGender());
+            }
         }
 
         if (dto.getShowClass() != null && !dto.getShowClass().isEmpty()) {
             try {
                 entry.setShowClass(ShowClass.valueOf(dto.getShowClass().toUpperCase()));
-            } catch (Exception e) {
-                System.err.println("Chyba při parsování ShowClass: " + dto.getShowClass());
+            } catch (IllegalArgumentException e) {
+                log.warn("Neplatná třída výstavy '{}', ignoruji", dto.getShowClass());
             }
         }
 
         if (dto.getCatalogNumber() != null && !dto.getCatalogNumber().isEmpty()) {
             try {
                 entry.setCatalogNumber(Integer.parseInt(dto.getCatalogNumber()));
-            } catch (Exception e) {}
+            } catch (NumberFormatException e) {
+                log.warn("Neplatné číslo katalogu '{}', ignoruji", dto.getCatalogNumber());
+            }
         }
 
         catRepository.save(cat);

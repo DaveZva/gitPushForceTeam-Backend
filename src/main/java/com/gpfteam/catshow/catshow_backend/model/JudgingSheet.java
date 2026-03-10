@@ -10,7 +10,10 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "judging_sheets")
+@Table(name = "judging_sheets", indexes = {
+        @Index(name = "idx_sheet_show_judge_cat", columnList = "show_id, judge_id, day"),
+        @Index(name = "idx_sheet_show_day", columnList = "show_id, day")
+})
 public class JudgingSheet {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

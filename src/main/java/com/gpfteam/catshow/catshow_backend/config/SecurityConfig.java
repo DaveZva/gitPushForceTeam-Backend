@@ -37,6 +37,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/shows/**").permitAll() // Dodělat práva správně..
                         .requestMatchers(HttpMethod.GET, "/api/v1/public/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/calling/show/**").permitAll()
 
                         .requestMatchers(HttpMethod.POST, "/api/v1/payments/webhook").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/registrations").authenticated()
@@ -48,7 +49,13 @@ public class SecurityConfig {
 
                         .requestMatchers("/ws-calling/**").permitAll()
 
-                        .anyRequest().authenticated()
+                        .requestMatchers("/api/v1/secretariat/**").hasAnyAuthority("SECRETARIAT", "ADMIN")
+                        .requestMatchers("/api/v1/judging/**").hasAnyAuthority("JUDGE", "SECRETARIAT", "ADMIN")
+                        .requestMatchers("/api/v1/steward/**").hasAnyAuthority("STEWARD", "ADMIN")
+                        .requestMatchers("/api/v1/calling/**").hasAnyAuthority("STEWARD", "SECRETARIAT", "ADMIN")
+
+
+                .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
