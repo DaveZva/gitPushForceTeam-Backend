@@ -7,6 +7,8 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 public interface BreederRepository extends JpaRepository<Breeder, Long> {
+    Optional<Breeder> findByEmailIgnoreCase(String email);
+
     @Query("SELECT DISTINCT r.breeder FROM Registration r WHERE r.user.email = :email ORDER BY r.breeder.lastName ASC")
     List<Breeder> findPreviousBreedersByUser(@Param("email") String email);
 }

@@ -107,39 +107,36 @@ public class JudgingSheetService {
     }
 
     public List<JudgeWorkloadDto> getWorkloadStats(Long showId, String day) {
-        Map<Long, List<RegistrationEntry>> distribution =
-                judgeAssignmentService.distributeWorkloadEvenly(showId, day);
+        List<JudgingSheet> sheets = judgingSheetRepository.findByShowIdAndDay(showId, day);
 
-        List<JudgeWorkloadDto> stats = new ArrayList<>();
+        Map<Judge, List<JudgingSheet>> byJudge = sheets.stream()
+                .collect(Collectors.groupingBy(JudgingSheet::getJudge));
 
-        for (Map.Entry<Long, List<RegistrationEntry>> entry : distribution.entrySet()) {
-            Judge judge = judgeRepository.findById(entry.getKey()).orElseThrow();
-            List<RegistrationEntry> cats = entry.getValue();
+        return byJudge.entrySet().stream().map(e -> {
+            Judge judge = e.getKey();
+            List<JudgingSheet> judgeSheets = e.getValue();
 
-            Map<String, Long> breedCounts = cats.stream()
+            Map<String, Long> breedCounts = judgeSheets.stream()
                     .collect(Collectors.groupingBy(
-                            e -> e.getCat().getEmsCode().split(" ")[0],
-                            Collectors.counting()
-                    ));
+                            s -> s.getCatEntry().getCat().getEmsCode().split(" ")[0],
+                            Collectors.counting()));
 
             List<BreedDistributionDto> breedDistribution = breedCounts.entrySet().stream()
-                    .map(e -> BreedDistributionDto.builder()
-                            .code(e.getKey())
-                            .name(getBreedName(e.getKey()))
-                            .count(e.getValue().intValue())
+                    .map(be -> BreedDistributionDto.builder()
+                            .code(be.getKey())
+                            .name(getBreedName(be.getKey()))
+                            .count(be.getValue().intValue())
                             .build())
                     .collect(Collectors.toList());
 
-            stats.add(JudgeWorkloadDto.builder()
+            return JudgeWorkloadDto.builder()
                     .judgeId(judge.getId())
                     .judgeName(judge.getFirstName() + " " + judge.getLastName())
                     .qualifications(judge.getValidGroups())
-                    .catsCount(cats.size())
+                    .catsCount(judgeSheets.size())
                     .breedDistribution(breedDistribution)
-                    .build());
-        }
-
-        return stats;
+                    .build();
+        }).collect(Collectors.toList());
     }
 
     public List<JudgingSheetDto> getJudgeSheets(Long showId, Long judgeId, String day) {

@@ -9,7 +9,9 @@ import lombok.*;
 @AllArgsConstructor
 @Getter
 @Entity
-@Table(name = "owners")
+@Table(name = "owners", indexes = {
+        @Index(name = "idx_owner_email", columnList = "email")
+})
 public class Owner {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
