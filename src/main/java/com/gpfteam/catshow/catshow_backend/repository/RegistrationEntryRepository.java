@@ -11,13 +11,13 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface RegistrationEntryRepository extends JpaRepository<RegistrationEntry, Long> {
+
     @Query("SELECT MAX(e.catalogNumber) FROM RegistrationEntry e WHERE e.registration.show.id = :showId")
     Integer findMaxCatalogNumberByShowId(@Param("showId") Long showId);
 
     @Query("SELECT COUNT(e) FROM RegistrationEntry e " +
             "WHERE e.registration.show.id = :showId " +
             "AND e.registration.status IN :statuses")
-
     Long countEntriesByShowIdAndStatus(Long showId, List<RegistrationStatus> statuses);
 
     @Query("SELECT COUNT(e) FROM RegistrationEntry e WHERE e.registration.status = :status")
@@ -26,6 +26,7 @@ public interface RegistrationEntryRepository extends JpaRepository<RegistrationE
     @Query("SELECT COUNT(e) FROM RegistrationEntry e WHERE e.registration.show.id = :showId AND e.registration.status = :status")
     long countByShowIdAndRegistrationStatus(@Param("showId") Long showId, @Param("status") RegistrationStatus status);
 
+    @EntityGraph(attributePaths = {"cat", "registration"})
     @Query("SELECT re FROM RegistrationEntry re WHERE re.registration.show.id = :showId")
     List<RegistrationEntry> findByShowId(@Param("showId") Long showId);
 
