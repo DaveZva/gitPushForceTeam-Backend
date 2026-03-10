@@ -69,7 +69,7 @@ public class SecretariatController {
 
     @GetMapping("/{id}")
     public ResponseEntity<SecretariatShowDetailDto> getShowById(@PathVariable Long id) {
-        Show show = showRepository.findById(id)
+        Show show = showRepository.findByIdWithJudges(id)
                 .orElseThrow(() -> new RuntimeException("Výstava nenalezena"));
 
         long totalRegistrations = registrationRepository.countByShowId(id);
