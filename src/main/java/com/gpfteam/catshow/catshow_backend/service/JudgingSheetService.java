@@ -6,7 +6,6 @@ import com.gpfteam.catshow.catshow_backend.dto.JudgingSheetDto;
 import com.gpfteam.catshow.catshow_backend.model.*;
 import com.gpfteam.catshow.catshow_backend.model.enums.JudgingStatus;
 import com.gpfteam.catshow.catshow_backend.repository.*;
-import com.gpfteam.catshow.catshow_backend.service.PdfGenerationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,9 +30,7 @@ public class JudgingSheetService {
     @Transactional
     public void generateJudgingSheetsForShow(Long showId) {
         Show show = showRepository.findById(showId).orElseThrow();
-
         List<String> days = getDaysFromShow(show);
-
         for (String day : days) {
             generateForDay(showId, day);
         }
@@ -43,6 +40,7 @@ public class JudgingSheetService {
     public void generateForDay(Long showId, String day) {
         log.info("Mažu staré posuzovací listy pro showId: {}, den: {}", showId, day);
         judgingSheetRepository.deleteByShowIdAndDay(showId, day);
+        judgingSheetRepository.flush();
 
         Map<Long, List<RegistrationEntry>> distribution =
                 judgeAssignmentService.distributeWorkloadEvenly(showId, day);
@@ -55,55 +53,73 @@ public class JudgingSheetService {
 
         Show show = showRepository.findById(showId).orElseThrow();
 
+        Set<Long> judgeIds = distribution.keySet();
+        Map<Long, Judge> judgeMap = judgeRepository.findAllById(judgeIds)
+                .stream()
+                .collect(Collectors.toMap(Judge::getId, j -> j));
+
+        LocalDateTime now = LocalDateTime.now();
+        List<JudgingSheet> sheetsToSave = new ArrayList<>();
+
         for (Map.Entry<Long, List<RegistrationEntry>> entry : distribution.entrySet()) {
-            log.info("Ukládám {} listů pro posuzovatele ID: {}", entry.getValue().size(), entry.getKey());
-            Judge judge = judgeRepository.findById(entry.getKey()).orElseThrow();
+            Judge judge = judgeMap.get(entry.getKey());
+            if (judge == null) {
+                log.warn("Soudce ID {} nenalezen, přeskakuji", entry.getKey());
+                continue;
+            }
+            log.info("Připravuji {} listů pro soudce ID: {}", entry.getValue().size(), entry.getKey());
 
             for (RegistrationEntry catEntry : entry.getValue()) {
-                JudgingSheet sheet = JudgingSheet.builder()
+                sheetsToSave.add(JudgingSheet.builder()
                         .show(show)
                         .judge(judge)
                         .catEntry(catEntry)
                         .day(day)
                         .status(JudgingStatus.PENDING)
                         .catalogNumber(catEntry.getCatalogNumber())
-                        .createdAt(LocalDateTime.now())
-                        .build();
-
-                judgingSheetRepository.save(sheet);
+                        .createdAt(now)
+                        .build());
             }
         }
+
+        // Jeden batch INSERT místo N jednotlivých INSERT volání
+        judgingSheetRepository.saveAll(sheetsToSave);
+        log.info("Uloženo {} posuzovacích listů pro den {}", sheetsToSave.size(), day);
     }
 
     @Transactional
     public void regenerateJudgingSheetsForJudge(Long showId, Long judgeId) {
         judgingSheetRepository.deleteByShowIdAndJudgeId(showId, judgeId);
+        judgingSheetRepository.flush();
 
         Show show = showRepository.findById(showId).orElseThrow();
+        Judge judge = judgeRepository.findById(judgeId).orElseThrow();
         List<String> days = getDaysFromShow(show);
+
+        List<JudgingSheet> sheetsToSave = new ArrayList<>();
+        LocalDateTime now = LocalDateTime.now();
 
         for (String day : days) {
             Map<Long, List<RegistrationEntry>> distribution =
                     judgeAssignmentService.distributeWorkloadEvenly(showId, day);
 
             if (distribution.containsKey(judgeId)) {
-                Judge judge = judgeRepository.findById(judgeId).orElseThrow();
-
                 for (RegistrationEntry catEntry : distribution.get(judgeId)) {
-                    JudgingSheet sheet = JudgingSheet.builder()
+                    sheetsToSave.add(JudgingSheet.builder()
                             .show(show)
                             .judge(judge)
                             .catEntry(catEntry)
                             .day(day)
                             .status(JudgingStatus.PENDING)
                             .catalogNumber(catEntry.getCatalogNumber())
-                            .createdAt(LocalDateTime.now())
-                            .build();
-
-                    judgingSheetRepository.save(sheet);
+                            .createdAt(now)
+                            .build());
                 }
             }
         }
+
+        judgingSheetRepository.saveAll(sheetsToSave);
+        log.info("Regenerováno {} listů pro soudce {} ", sheetsToSave.size(), judgeId);
     }
 
     public List<JudgeWorkloadDto> getWorkloadStats(Long showId, String day) {
@@ -182,7 +198,6 @@ public class JudgingSheetService {
         if (sheets.isEmpty()) {
             throw new RuntimeException("No judging sheets found for judge " + judgeId + " on " + day);
         }
-
         return pdfGenerationService.createJudgingSheetsPdf(sheets);
     }
 }
