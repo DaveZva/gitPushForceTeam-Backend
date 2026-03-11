@@ -17,6 +17,7 @@ import com.gpfteam.catshow.catshow_backend.service.CatalogService;
 import com.gpfteam.catshow.catshow_backend.util.EmsUtility;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
@@ -35,10 +36,6 @@ public class PublicShowController {
     private final CatalogService catalogService;
     private final RegistrationEntryRepository registrationEntryRepository;
 
-    /**
-     * GET /api/v1/shows/available
-     * Veřejný endpoint pro registrační formulář
-     */
     @GetMapping("/available")
     public ResponseEntity<List<Show>> getAvailableShows() {
         List<Show> openShows = showRepository.findByStatusOrderByStartDateAsc(Show.ShowStatus.OPEN);
@@ -46,6 +43,7 @@ public class PublicShowController {
     }
 
     @GetMapping("/{showId}/catalog")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<PublicCatalogEntryDto>> getShowCatalog(@PathVariable Long showId) {
         List<Registration> registrations = registrationRepository.findConfirmedRegistrationsWithCatsByShowId(showId);
         List<PublicCatalogEntryDto> catalogEntries = new ArrayList<>();
