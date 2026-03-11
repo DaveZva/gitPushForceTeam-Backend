@@ -17,6 +17,4 @@ public interface ShowRepository extends JpaRepository<Show, Long> {
     @EntityGraph(attributePaths = {"judges"})
     @Query("SELECT s FROM Show s WHERE s.id = :id")
     Optional<Show> findByIdWithJudges(@Param("id") Long id);
-
-
 }

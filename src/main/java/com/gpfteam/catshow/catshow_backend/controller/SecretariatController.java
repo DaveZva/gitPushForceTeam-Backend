@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -221,8 +222,9 @@ public class SecretariatController {
     }
 
     @GetMapping("/{showId}/judges")
+    @Transactional(readOnly = true)
     public ResponseEntity<List<SecretariatJudgeDto>> getShowJudges(@PathVariable Long showId) {
-        Show show = showRepository.findById(showId).orElseThrow();
+        Show show = showRepository.findByIdWithJudges(showId).orElseThrow();
         return ResponseEntity.ok(show.getJudges().stream()
                 .map(this::mapToJudgeDto)
                 .toList());
@@ -230,7 +232,7 @@ public class SecretariatController {
 
     @PostMapping("/{showId}/judges")
     public ResponseEntity<Void> assignJudgeToShow(@PathVariable Long showId, @RequestBody Map<String, Long> payload) {
-        Show show = showRepository.findById(showId).orElseThrow();
+        Show show = showRepository.findByIdWithJudges(showId).orElseThrow();
         com.gpfteam.catshow.catshow_backend.model.Judge judge = judgeRepository.findById(payload.get("judgeId"))
                 .orElseThrow();
 
@@ -243,7 +245,7 @@ public class SecretariatController {
 
     @DeleteMapping("/{showId}/judges/{judgeId}")
     public ResponseEntity<Void> removeJudgeFromShow(@PathVariable Long showId, @PathVariable Long judgeId) {
-        Show show = showRepository.findById(showId).orElseThrow();
+        Show show = showRepository.findByIdWithJudges(showId).orElseThrow();
         show.getJudges().removeIf(j -> j.getId().equals(judgeId));
         showRepository.save(show);
         return ResponseEntity.ok().build();
@@ -256,7 +258,7 @@ public class SecretariatController {
                 .lastName(judge.getLastName())
                 .email(judge.getEmail())
                 .country(judge.getCountry())
-                .validGroups(judge.getValidGroups())
+                .validGroups(judge.getValidGroups() != null ? new ArrayList<>(judge.getValidGroups()) : new ArrayList<>())
                 .build();
     }
 
