@@ -10,11 +10,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/secretariat/shows/{showId}/judging")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Slf4j
 public class JudgingSheetController {
 
@@ -102,6 +102,36 @@ public class JudgingSheetController {
                     .body(pdfContent);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/sheets")
+    public ResponseEntity<List<JudgingSheetDto>> getAllSheets(
+            @PathVariable Long showId,
+            @RequestParam String day) {
+        List<JudgingSheetDto> sheets = judgingSheetService.getAllSheets(showId, day);
+        return ResponseEntity.ok(sheets);
+    }
+
+    @PatchMapping("/sheets/{sheetId}/reassign")
+    public ResponseEntity<?> reassignSheet(
+            @PathVariable Long showId,
+            @PathVariable Long sheetId,
+            @RequestBody Map<String, Long> payload) {
+        try {
+            Long targetJudgeId = payload.get("targetJudgeId");
+            if (targetJudgeId == null) {
+                return ResponseEntity.badRequest().body(new ErrorResponse("targetJudgeId is required"));
+            }
+            JudgingSheetDto updated = judgingSheetService.reassignSheet(showId, sheetId, targetJudgeId);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            log.error("Error reassigning sheet", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse(e.getMessage()));
         }
     }
 

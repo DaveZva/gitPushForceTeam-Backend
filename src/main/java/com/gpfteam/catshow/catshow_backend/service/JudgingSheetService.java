@@ -6,6 +6,7 @@ import com.gpfteam.catshow.catshow_backend.dto.JudgingSheetDto;
 import com.gpfteam.catshow.catshow_backend.model.*;
 import com.gpfteam.catshow.catshow_backend.model.enums.JudgingStatus;
 import com.gpfteam.catshow.catshow_backend.repository.*;
+import com.gpfteam.catshow.catshow_backend.util.EmsUtility;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -82,7 +83,6 @@ public class JudgingSheetService {
             }
         }
 
-        // Jeden batch INSERT místo N jednotlivých INSERT volání
         judgingSheetRepository.saveAll(sheetsToSave);
         log.info("Uloženo {} posuzovacích listů pro den {}", sheetsToSave.size(), day);
     }
@@ -169,6 +169,8 @@ public class JudgingSheetService {
                         .catalogNumber(sheet.getCatalogNumber())
                         .status(sheet.getStatus().name())
                         .day(sheet.getDay())
+                        .category(EmsUtility.getCategory(sheet.getCatEntry().getCat().getEmsCode()))
+                        .showClass(sheet.getCatEntry().getShowClass() != null ? sheet.getCatEntry().getShowClass().name() : null)
                         .build())
                 .collect(Collectors.toList());
     }
@@ -199,5 +201,75 @@ public class JudgingSheetService {
             throw new RuntimeException("No judging sheets found for judge " + judgeId + " on " + day);
         }
         return pdfGenerationService.createJudgingSheetsPdf(sheets);
+    }
+
+    public List<JudgingSheetDto> getAllSheets(Long showId, String day) {
+        List<JudgingSheet> sheets = judgingSheetRepository.findByShowIdAndDay(showId, day);
+        return sheets.stream()
+                .map(sheet -> JudgingSheetDto.builder()
+                        .id(sheet.getId())
+                        .judgeId(sheet.getJudge().getId())
+                        .catEntryId(sheet.getCatEntry().getId())
+                        .catName(sheet.getCatEntry().getCat().getCatName())
+                        .emsCode(sheet.getCatEntry().getCat().getEmsCode())
+                        .catGroup(sheet.getCatEntry().getCat().getCatGroup())
+                        .catalogNumber(sheet.getCatalogNumber())
+                        .status(sheet.getStatus().name())
+                        .day(sheet.getDay())
+                        .category(EmsUtility.getCategory(sheet.getCatEntry().getCat().getEmsCode()))
+                        .showClass(sheet.getCatEntry().getShowClass() != null ? sheet.getCatEntry().getShowClass().name() : null)
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public JudgingSheetDto reassignSheet(Long showId, Long sheetId, Long targetJudgeId) {
+        JudgingSheet sheet = judgingSheetRepository.findById(sheetId)
+                .orElseThrow(() -> new IllegalArgumentException("Judging sheet not found: " + sheetId));
+
+        if (!sheet.getShow().getId().equals(showId)) {
+            throw new IllegalArgumentException("Sheet does not belong to show " + showId);
+        }
+
+        Judge targetJudge = judgeRepository.findById(targetJudgeId)
+                .orElseThrow(() -> new IllegalArgumentException("Judge not found: " + targetJudgeId));
+
+        String emsCode = sheet.getCatEntry().getCat().getEmsCode();
+        int category = EmsUtility.getCategory(emsCode);
+        String categoryStr = String.valueOf(category);
+
+        boolean qualified = targetJudge.getValidGroups() != null && (
+                targetJudge.getValidGroups().contains(categoryStr) ||
+                        targetJudge.getValidGroups().contains("ALL_BREEDS") ||
+                        targetJudge.getValidGroups().contains("AB")
+        );
+
+        if (!qualified) {
+            throw new IllegalStateException(
+                    "Judge " + targetJudge.getFirstName() + " " + targetJudge.getLastName() +
+                            " is not qualified for category " + category +
+                            " (EMS: " + emsCode + ")"
+            );
+        }
+
+        sheet.setJudge(targetJudge);
+        sheet.setUpdatedAt(LocalDateTime.now());
+        judgingSheetRepository.save(sheet);
+
+        log.info("Sheet {} reassigned from judge {} to judge {}", sheetId, sheet.getJudge().getId(), targetJudgeId);
+
+        return JudgingSheetDto.builder()
+                .id(sheet.getId())
+                .judgeId(targetJudge.getId())
+                .catEntryId(sheet.getCatEntry().getId())
+                .catName(sheet.getCatEntry().getCat().getCatName())
+                .emsCode(emsCode)
+                .catGroup(sheet.getCatEntry().getCat().getCatGroup())
+                .catalogNumber(sheet.getCatalogNumber())
+                .status(sheet.getStatus().name())
+                .day(sheet.getDay())
+                .category(category)
+                .showClass(sheet.getCatEntry().getShowClass() != null ? sheet.getCatEntry().getShowClass().name() : null)
+                .build();
     }
 }

@@ -16,4 +16,6 @@ public class JudgingSheetDto {
     private Integer catalogNumber;
     private String status;
     private String day;
+    private Integer category;
+    private String showClass;
 }
