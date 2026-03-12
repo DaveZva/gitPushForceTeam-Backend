@@ -238,11 +238,11 @@ public class JudgingSheetService {
         int category = EmsUtility.getCategory(emsCode);
         String categoryStr = String.valueOf(category);
 
-        boolean qualified = targetJudge.getValidGroups() != null && (
+        boolean qualified = category == 5 || (targetJudge.getValidGroups() != null && (
                 targetJudge.getValidGroups().contains(categoryStr) ||
                         targetJudge.getValidGroups().contains("ALL_BREEDS") ||
                         targetJudge.getValidGroups().contains("AB")
-        );
+        ));
 
         if (!qualified) {
             throw new IllegalStateException(
