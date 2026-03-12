@@ -120,6 +120,9 @@ public class JudgeAssignmentService {
         if (judge.getValidGroups() == null) return false;
 
         String categoryNumber = breedGroupKey.split("-")[0].replace("CAT", "");
+
+        if ("5".equals(categoryNumber)) return true;
+
         List<String> validGroups = judge.getValidGroups();
 
         return validGroups.contains(categoryNumber) ||
