@@ -24,6 +24,7 @@ import java.util.Map;
 public class PdfGenerationService {
 
     private static final float[] PRIMARY_COLOR = {0.008f, 0.482f, 1.0f};
+    private static final float[] CUSTOM_BLUE = {0.008f, 0.482f, 1.0f}; // #027BFF
     private static final float[] ROW_ALT_COLOR = {0.96f, 0.98f, 1.0f};
     private static final float[] FOOTER_LINE_COLOR = {0.80f, 0.90f, 1.0f};
     private static final float[] HEADER_BG = {0.96f, 0.96f, 0.96f};
@@ -52,6 +53,18 @@ public class PdfGenerationService {
         Judge judge = sheets.get(0).getJudge();
         String day = sheets.get(0).getDay();
 
+        String showName = "";
+        String showDate = "";
+        if (sheets.get(0).getCatEntry() != null && sheets.get(0).getCatEntry().getRegistration() != null) {
+            Show show = sheets.get(0).getCatEntry().getRegistration().getShow();
+            if (show != null) {
+                showName = show.getName();
+                if (show.getStartDate() != null) {
+                    showDate = show.getStartDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                }
+            }
+        }
+
         try (PDDocument document = new PDDocument()) {
             PDType0Font fontRegular = loadFont(document, "/fonts/DejaVuSans.ttf");
             PDType0Font fontBold = loadFont(document, "/fonts/DejaVuSans-Bold.ttf");
@@ -63,13 +76,14 @@ public class PdfGenerationService {
             float pageHeight = page.getMediaBox().getHeight();
 
             PDPageContentStream cs = new PDPageContentStream(document, page);
-            float yPosition = pageHeight - pageMargin - 50;
+            float yPosition = pageHeight - pageMargin - 65;
 
-            drawCustomHeader(cs, fontBold, judge, day, pageWidth, yPosition);
+            drawCustomHeader(document, cs, fontBold, judge, day, showName, showDate, pageWidth, yPosition);
 
+            // Posunuto výš pro zarovnání nahoru
             yPosition -= 70;
-            float[] colWidths = {35, 80, 35, 50, 65, 40, 40, 40, 40, 40, 40, 40, 40, 100};
-            String[] headers = {"No.", "EMS", "Sex", "Class", "Born", "Ad M", "Ad F", "Ne M", "Ne F", "11 M", "11 F", "12 M", "12 F", "Results"};
+            float[] colWidths = {35, 45, 55, 35, 50, 65, 35, 35, 35, 35, 35, 35, 35, 35, 100};
+            String[] headers = {"No.", "EMS", "", "Sex", "Class", "Born", "Ad M", "Ad F", "Ne M", "Ne F", "11 M", "11 F", "12 M", "12 F", "Results"};
             float rowHeight = 22;
 
             float totalTableWidth = 0;
@@ -82,13 +96,13 @@ public class PdfGenerationService {
             int rowIdx = 0;
             for (JudgingSheet sheet : sheets) {
                 if (yPosition < 110) {
-                    drawCustomFooter(document, cs, pageWidth);
                     cs.close();
                     page = new PDPage(new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth()));
                     document.addPage(page);
                     cs = new PDPageContentStream(document, page);
-                    yPosition = pageHeight - pageMargin - 50;
-                    drawCustomHeader(cs, fontBold, judge, day, pageWidth, yPosition);
+                    yPosition = pageHeight - pageMargin - 65;
+                    drawCustomHeader(document, cs, fontBold, judge, day, showName, showDate, pageWidth, yPosition);
+                    // Posunuto výš pro zarovnání nahoru
                     yPosition -= 70;
                     drawCustomTableHeader(cs, fontBold, headers, colWidths, yPosition, rowHeight, tableStartX);
                     yPosition -= rowHeight;
@@ -98,7 +112,6 @@ public class PdfGenerationService {
                 rowIdx++;
             }
 
-            drawCustomFooter(document, cs, pageWidth);
             cs.close();
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             document.save(baos);
@@ -106,32 +119,74 @@ public class PdfGenerationService {
         }
     }
 
-    private void drawCustomHeader(PDPageContentStream cs, PDType0Font fontBold, Judge judge, String day, float pageWidth, float y) throws IOException {
-        cs.setNonStrokingColor(PRIMARY_COLOR[0], PRIMARY_COLOR[1], PRIMARY_COLOR[2]);
-        cs.addRect(0, y, pageWidth, 90);
+    private void drawCustomHeader(PDDocument doc, PDPageContentStream cs, PDType0Font fontBold, Judge judge, String day, String showName, String showDate, float pageWidth, float y) throws IOException {
+        // Nastaveni barvy pozadi na svetlou modrou (#E3F1FF)
+        cs.setNonStrokingColor(0.89f, 0.945f, 1.0f);
+        cs.addRect(0, y, pageWidth, 105);
         cs.fill();
 
+        // Nastaveni log s vetsim odstupem a mezerami
+        String[] logoPaths = {"/logos/logo(1).png", "/logos/logo(2).png", "/logos/logo(3).png", "/logos/logo(4).png"};
+        float logoSize = 55;
+        float logoSpacing = 25;
+        float edgeMargin = 60;
+        float logoY = y + 25;
+
+        // Leva dvojice log
+        for (int i = 0; i < 2; i++) {
+            byte[] logoBytes = logoCache.get(logoPaths[i]);
+            if (logoBytes != null) {
+                PDImageXObject img = PDImageXObject.createFromByteArray(doc, logoBytes, logoPaths[i]);
+                cs.drawImage(img, edgeMargin + (i * (logoSize + logoSpacing)), logoY, logoSize, logoSize);
+            }
+        }
+
+        // Prava dvojice log
+        for (int i = 2; i < 4; i++) {
+            byte[] logoBytes = logoCache.get(logoPaths[i]);
+            if (logoBytes != null) {
+                PDImageXObject img = PDImageXObject.createFromByteArray(doc, logoBytes, logoPaths[i]);
+                float xPos = pageWidth - edgeMargin - logoSize - ((3 - i) * (logoSize + logoSpacing));
+                cs.drawImage(img, xPos, logoY, logoSize, logoSize);
+            }
+        }
+
         String fullName = judge.getFirstName().toUpperCase() + " " + judge.getLastName().toUpperCase();
-        float nameFontSize = 24;
-        float nameSpacing = -2f;
+        float nameFontSize = 20;
+        float nameSpacing = -1.5f;
         float nameWidth = (fontBold.getStringWidth(fullName) / 1000 * nameFontSize) + (fullName.length() * nameSpacing);
         float nameX = (pageWidth - nameWidth) / 2;
 
         cs.beginText();
         cs.setFont(fontBold, nameFontSize);
-        cs.setNonStrokingColor(1f, 1f, 1f);
+        // Nastaveni barvy jmena na ČERNOU (TEXT_DARK)
+        cs.setNonStrokingColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2]);
         cs.setCharacterSpacing(nameSpacing);
-        cs.newLineAtOffset(nameX, y + 50);
+        cs.newLineAtOffset(nameX, y + 75);
         cs.showText(fullName);
         cs.endText();
         cs.setCharacterSpacing(0);
 
+        String infoText = (showName != null ? showName.toUpperCase() : "") + " | " + (showDate != null ? showDate : "");
+        float infoFontSize = 10;
+        float infoWidth = fontBold.getStringWidth(infoText) / 1000 * infoFontSize;
+        float infoX = (pageWidth - infoWidth) / 2;
+
+        cs.beginText();
+        cs.setFont(fontBold, infoFontSize);
+        // Nastaveni barvy info o vystave na ČERNOU (TEXT_DARK)
+        cs.setNonStrokingColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2]);
+        cs.newLineAtOffset(infoX, y + 55);
+        cs.showText(infoText);
+        cs.endText();
+
         float rectWidth = 120;
-        float rectHeight = 25;
+        float rectHeight = 22;
         float rectX = (pageWidth - rectWidth) / 2;
         float rectY = y + 17;
 
-        cs.setNonStrokingColor(1f, 1f, 1f);
+        // Pozadi tlacitka nechame syte modre (#027BFF)
+        cs.setNonStrokingColor(CUSTOM_BLUE[0], CUSTOM_BLUE[1], CUSTOM_BLUE[2]);
         drawRoundedRect(cs, rectX, rectY, rectWidth, rectHeight, 10);
 
         String dayText = day.toUpperCase();
@@ -142,9 +197,10 @@ public class PdfGenerationService {
 
         cs.beginText();
         cs.setFont(fontBold, dayFontSize);
-        cs.setNonStrokingColor(PRIMARY_COLOR[0], PRIMARY_COLOR[1], PRIMARY_COLOR[2]);
+        // Text uvnitr tlacitka nechame bily
+        cs.setNonStrokingColor(1f, 1f, 1f);
         cs.setCharacterSpacing(daySpacing);
-        cs.newLineAtOffset(textX, rectY + 8);
+        cs.newLineAtOffset(textX, rectY + 7);
         cs.showText(dayText);
         cs.endText();
         cs.setCharacterSpacing(0);
@@ -177,14 +233,27 @@ public class PdfGenerationService {
 
         float xPos = startX;
         for (int i = 0; i < headers.length; i++) {
+            if (i == 2) {
+                xPos += colWidths[i];
+                continue;
+            }
+
             cs.moveTo(xPos, yPos);
             cs.lineTo(xPos, yPos + rowHeight);
             cs.stroke();
 
             cs.beginText();
-            cs.setFont(font, 9);
+            cs.setFont(font, 8);
             cs.setNonStrokingColor(1f, 1f, 1f);
-            cs.newLineAtOffset(xPos + 5, yPos + 7);
+
+            float labelX = xPos + 3;
+            if (i == 1) {
+                float emsCombinedWidth = colWidths[1] + colWidths[2];
+                float textWidth = font.getStringWidth("EMS") / 1000 * 8;
+                labelX = xPos + (emsCombinedWidth - textWidth) / 2;
+            }
+
+            cs.newLineAtOffset(labelX, yPos + 7);
             cs.showText(headers[i]);
             cs.endText();
             xPos += colWidths[i];
@@ -230,45 +299,41 @@ public class PdfGenerationService {
             else { if (isMale) adM = "X"; else adF = "X"; }
         }
 
+        String fullEms = cat.getEmsCode() != null ? cat.getEmsCode() : "";
+        String emsBase = "";
+        String emsSuffix = "";
+        if (fullEms.contains(" ")) {
+            int firstSpace = fullEms.indexOf(" ");
+            emsBase = fullEms.substring(0, firstSpace);
+            emsSuffix = fullEms.substring(firstSpace + 1);
+        } else {
+            emsBase = fullEms;
+        }
+
         xPos = startX;
-        String[] rowData = { String.valueOf(sheet.getCatalogNumber()), cat.getEmsCode() != null ? cat.getEmsCode() : "",
-                isMale ? "1,0" : "0,1", classCode, cat.getBirthDate() != null ? cat.getBirthDate() : "",
-                adM, adF, neM, neF, c11M, c11F, c12M, c12F, sheet.getGrade() != null ? sheet.getGrade() : "" };
+        String[] rowData = {
+                String.valueOf(sheet.getCatalogNumber()),
+                emsBase,
+                emsSuffix,
+                isMale ? "1,0" : "0,1",
+                classCode,
+                cat.getBirthDate() != null ? cat.getBirthDate() : "",
+                adM, adF, neM, neF, c11M, c11F, c12M, c12F,
+                sheet.getGrade() != null ? sheet.getGrade() : ""
+        };
 
         for (int i = 0; i < rowData.length; i++) {
             String text = rowData[i];
-            boolean isMark = (i >= 5 && i <= 12 && "X".equals(text));
-            cs.setNonStrokingColor(i == 0 || isMark ? PRIMARY_COLOR[0] : TEXT_DARK[0], i == 0 || isMark ? PRIMARY_COLOR[1] : TEXT_DARK[1], i == 0 || isMark ? PRIMARY_COLOR[2] : TEXT_DARK[2]);
+            boolean isMark = (i >= 6 && i <= 13 && "X".equals(text));
+            // Cerna barva pro celou tabulku (TEXT_DARK)
+            cs.setNonStrokingColor(TEXT_DARK[0], TEXT_DARK[1], TEXT_DARK[2]);
             cs.beginText();
-            cs.setFont(i == 0 || isMark ? fontBold : font, 8);
-            float xOffset = isMark ? xPos + (colWidths[i] / 2) - 3 : xPos + 5;
+            cs.setFont(i == 0 || isMark ? fontBold : font, 7);
+            float xOffset = isMark ? xPos + (colWidths[i] / 2) - 3 : xPos + 4;
             cs.newLineAtOffset(xOffset, yPos + 7);
             cs.showText(text);
             cs.endText();
             xPos += colWidths[i];
-        }
-    }
-
-    private void drawCustomFooter(PDDocument doc, PDPageContentStream cs, float pageWidth) throws IOException {
-        float footerY = 25;
-        cs.setStrokingColor(FOOTER_LINE_COLOR[0], FOOTER_LINE_COLOR[1], FOOTER_LINE_COLOR[2]);
-        cs.setLineWidth(1.0f);
-        cs.moveTo(pageMargin, footerY + 55);
-        cs.lineTo(pageWidth - pageMargin, footerY + 55);
-        cs.stroke();
-
-        String[] logoPaths = {"/logos/logo(1).png", "/logos/logo(2).png", "/logos/logo(3).png", "/logos/logo(4).png"};
-        float logoSize = 40;
-        float spacing = 80;
-        float currentX = (pageWidth - (4 * logoSize + 3 * spacing)) / 2;
-
-        for (String path : logoPaths) {
-            byte[] logoBytes = logoCache.get(path);
-            if (logoBytes != null) {
-                PDImageXObject img = PDImageXObject.createFromByteArray(doc, logoBytes, path);
-                cs.drawImage(img, currentX, footerY, logoSize, logoSize);
-            }
-            currentX += logoSize + spacing;
         }
     }
 
