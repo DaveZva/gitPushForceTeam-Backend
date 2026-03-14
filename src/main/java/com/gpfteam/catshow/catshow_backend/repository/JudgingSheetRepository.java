@@ -12,12 +12,12 @@ import java.util.List;
 @Repository
 public interface JudgingSheetRepository extends JpaRepository<JudgingSheet, Long> {
     @EntityGraph(attributePaths = {"catEntry", "catEntry.cat", "judge"})
-    @Query("SELECT j FROM JudgingSheet j WHERE j.show.id = :showId AND j.judge.id = :judgeId AND j.day = :day")
+    @Query("SELECT j FROM JudgingSheet j WHERE j.show.id = :showId AND j.judge.id = :judgeId AND j.day = :day ORDER BY j.catalogNumber ASC")
     List<JudgingSheet> findByShowIdAndJudgeIdAndDay(@Param("showId") Long showId, @Param("judgeId") Long judgeId, @Param("day") String day);
 
 
     @EntityGraph(attributePaths = {"catEntry", "catEntry.cat", "judge"})
-    @Query("SELECT j FROM JudgingSheet j WHERE j.show.id = :showId AND j.day = :day")
+    @Query("SELECT j FROM JudgingSheet j WHERE j.show.id = :showId AND j.day = :day ORDER BY j.catalogNumber ASC")
     List<JudgingSheet> findByShowIdAndDay(@Param("showId") Long showId, @Param("day") String day);
 
 
