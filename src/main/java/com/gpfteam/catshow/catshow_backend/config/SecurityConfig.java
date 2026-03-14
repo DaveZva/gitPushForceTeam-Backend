@@ -71,7 +71,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(List.of(
-                "https://pawdium.eu",
+                "https://www.pawdium.eu",
                 "https://git-push-force-team-frontend.vercel.app",
                 "http://localhost:5173"
         ));
