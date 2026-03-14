@@ -60,7 +60,11 @@ public class PdfGenerationService {
             if (show != null) {
                 showName = show.getName();
                 if (show.getStartDate() != null) {
-                    showDate = show.getStartDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                    if ("NEDĚLE".equalsIgnoreCase(day) || "SUNDAY".equalsIgnoreCase(day)) {
+                        showDate = show.getStartDate().plusDays(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                    } else {
+                        showDate = show.getStartDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                    }
                 }
             }
         }
@@ -80,7 +84,6 @@ public class PdfGenerationService {
 
             drawCustomHeader(document, cs, fontBold, judge, day, showName, showDate, pageWidth, yPosition);
 
-            // Posunuto výš pro zarovnání nahoru
             yPosition -= 70;
             float[] colWidths = {35, 45, 55, 35, 50, 65, 35, 35, 35, 35, 35, 35, 35, 35, 100};
             String[] headers = {"No.", "EMS", "", "Sex", "Class", "Born", "Ad M", "Ad F", "Ne M", "Ne F", "11 M", "11 F", "12 M", "12 F", "Results"};
@@ -102,7 +105,6 @@ public class PdfGenerationService {
                     cs = new PDPageContentStream(document, page);
                     yPosition = pageHeight - pageMargin - 65;
                     drawCustomHeader(document, cs, fontBold, judge, day, showName, showDate, pageWidth, yPosition);
-                    // Posunuto výš pro zarovnání nahoru
                     yPosition -= 70;
                     drawCustomTableHeader(cs, fontBold, headers, colWidths, yPosition, rowHeight, tableStartX);
                     yPosition -= rowHeight;
