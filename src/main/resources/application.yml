@@ -28,13 +28,13 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: ${DDL_AUTO}  # Pro development, v produkci použít 'validate' 'update' 'create-drop'
+      ddl-auto: ${DDL_AUTO}
     show-sql: false
     properties:
       hibernate:
         format_sql: false
         jdbc:
-          batch_size=50
+          batch_size: 50
         order_inserts: true
         order_updates: true
     defer-datasource-initialization: true
@@ -43,6 +43,7 @@ spring:
   sql:
     init:
       mode: ${SQL_INIT_MODE}
+      continue-on-error: true
 
   management:
     endpoints:
@@ -58,11 +59,10 @@ server:
 
 logging:
   level:
-    root: WARN
-    com.example.catshow: WARN
+    root: INFO
     com.gpfteam.catshow.catshow_backend: WARN
-    #org.hibernate.SQL: DEBUG
+    org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer: ERROR
 
 jwt:
   secret: ${JWT_SECRET_KEY}
-  expiration: 604800000  # 7 dní
+  expiration: 604800000
